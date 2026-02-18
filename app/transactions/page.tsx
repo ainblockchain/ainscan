@@ -4,7 +4,7 @@ import TransactionsTable from '@/components/TransactionsTable';
 export const revalidate = 10;
 
 const MAX_TX = 50;
-const SCAN_BATCH = 100;
+const SCAN_BATCH = 20; // ain_getBlockList returns at most 20 blocks per call
 const MAX_SCAN = 5000;
 
 async function findRecentTransactions(lastBlock: number): Promise<{ transactions: any[]; scannedBlocks: number }> {
