@@ -1,21 +1,23 @@
-import { getLastBlockNumber, getBlockList } from '@/lib/rpc';
+import { getLastBlockNumber, getBlockByNumber } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
 
 export const revalidate = 10;
 
-const BLOCKS_TO_FETCH = 5;
+const BLOCKS_TO_FETCH = 10;
 
 export default async function TransactionsPage() {
   const lastBlock = await getLastBlockNumber();
   const from = Math.max(0, lastBlock - BLOCKS_TO_FETCH + 1);
-  const blocks = await getBlockList(from, lastBlock).catch(() => []);
 
-  const sortedBlocks = Array.isArray(blocks)
-    ? [...blocks].sort((a: any, b: any) => b.number - a.number)
-    : [];
+  // Fetch blocks individually with full transaction data
+  const blockPromises = [];
+  for (let i = lastBlock; i >= from; i--) {
+    blockPromises.push(getBlockByNumber(i, true).catch(() => null));
+  }
+  const blocks = (await Promise.all(blockPromises)).filter(Boolean);
 
   const transactions: any[] = [];
-  for (const block of sortedBlocks) {
+  for (const block of blocks) {
     if (block.transactions && Array.isArray(block.transactions)) {
       for (const tx of block.transactions) {
         if (typeof tx === 'object') {
@@ -33,7 +35,7 @@ export default async function TransactionsPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Recent Transactions</h1>
       <p className="text-sm text-gray-500">
-        Showing transactions from the latest {BLOCKS_TO_FETCH} blocks.
+        Showing transactions from the latest {BLOCKS_TO_FETCH} blocks ({transactions.length} transactions found).
       </p>
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
         {transactions.length > 0 ? (

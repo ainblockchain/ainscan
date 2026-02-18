@@ -1,9 +1,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { rpc } from '@/lib/rpc';
 import DatabaseTreeView from '@/components/DatabaseTreeView';
 import Link from 'next/link';
+
+async function clientRpc(method: string, params: Record<string, any> = {}): Promise<any> {
+  const res = await fetch('/api/rpc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method, params }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(typeof json.error === 'string' ? json.error : json.error.message);
+  const wrapper = json.result;
+  if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
+    throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
+  }
+  return wrapper?.result ?? wrapper;
+}
 
 type TabKey = 'value' | 'rule' | 'function' | 'owner';
 
@@ -48,10 +62,10 @@ export default function DatabasePage({
       try {
         let result;
         try {
-          result = await rpc('ain_get', { type: rpcType, ref: dbPath });
+          result = await clientRpc('ain_get', { type: rpcType, ref: dbPath });
         } catch {
           // Retry with shallow fetch for large nodes
-          result = await rpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+          result = await clientRpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
         }
         // Strip #state_ph placeholders from shallow results, keeping only key names
         if (result && typeof result === 'object') {

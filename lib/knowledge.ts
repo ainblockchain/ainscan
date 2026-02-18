@@ -2,45 +2,137 @@ import { getValue } from './rpc';
 import { GraphData, GraphNode, GraphEdge, GraphStats } from './types';
 
 /**
- * Reads the on-chain knowledge graph via JSON-RPC (replaces direct Neo4j queries).
+ * Reads the on-chain knowledge graph via JSON-RPC.
  * On-chain paths:
  *   /apps/knowledge/graph/nodes/{nodeId} -> { address, topic_path, entry_id, title, depth, created_at }
  *   /apps/knowledge/graph/edges/{nodeId}/{targetNodeId} -> { type, created_at, created_by }
- *   /apps/knowledge/topics/...  -> topic tree
+ *   /apps/knowledge/topics/...  -> topic tree with .info metadata
  *   /apps/knowledge/explorations/{address}/{topicKey}/{entryId} -> exploration data
+ *
+ * The graph is built from:
+ * 1. On-chain graph nodes and edges (explicit links from parentEntry/relatedEntries)
+ * 2. Topic nodes (from the topic tree)
+ * 3. Inferred edges: exploration -> topic (IN_TOPIC), topic -> subtopic (SUBTOPIC)
  */
 
-function onchainNodeToGraphNode(nodeId: string, data: Record<string, any>): GraphNode {
-  const label = data.entry_id ? 'Exploration' : 'Topic';
-  return {
-    id: nodeId,
-    label,
-    properties: { ...data, id: nodeId },
-  };
+// -- helpers ------------------------------------------------------------------
+
+function flattenTopics(
+  obj: Record<string, any>,
+  prefix: string[] = []
+): { path: string; info: Record<string, any> }[] {
+  if (!obj || typeof obj !== 'object') return [];
+  const results: { path: string; info: Record<string, any> }[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === '.info' || !value || typeof value !== 'object') continue;
+    const currentPath = [...prefix, key];
+    if (value['.info']) {
+      results.push({ path: currentPath.join('/'), info: value['.info'] });
+    }
+    results.push(...flattenTopics(value, currentPath));
+  }
+  return results;
 }
 
-function buildGraphFromOnchain(
-  nodesData: Record<string, any> | null,
-  edgesData: Record<string, Record<string, any>> | null
-): GraphData {
-  const nodes: GraphNode[] = [];
-  const edges: GraphEdge[] = [];
+function topicPathToKey(topicPath: string): string {
+  return topicPath.replace(/\//g, '|');
+}
 
-  if (nodesData) {
-    for (const [nodeId, data] of Object.entries(nodesData)) {
-      if (data && typeof data === 'object') {
-        nodes.push(onchainNodeToGraphNode(nodeId, data));
+// -- graph building -----------------------------------------------------------
+
+function buildFullGraph(
+  graphNodes: Record<string, any> | null,
+  graphEdges: Record<string, Record<string, any>> | null,
+  topicsData: Record<string, any> | null,
+  explorationsData: Record<string, any> | null,
+): GraphData {
+  const nodesMap = new Map<string, GraphNode>();
+  const edgesMap = new Map<string, GraphEdge>();
+
+  // 1. Add topic nodes from the topic tree
+  const topics = flattenTopics(topicsData || {});
+  for (const topic of topics) {
+    const topicId = `topic:${topic.path}`;
+    nodesMap.set(topicId, {
+      id: topicId,
+      label: 'Topic',
+      properties: {
+        id: topicId,
+        title: topic.info.title || topic.path,
+        description: topic.info.description || '',
+        topic_path: topic.path,
+        created_by: topic.info.created_by,
+        created_at: topic.info.created_at,
+      },
+    });
+  }
+
+  // 2. Build subtopic edges (parent topic -> child topic)
+  for (const topic of topics) {
+    const parts = topic.path.split('/');
+    if (parts.length > 1) {
+      const parentPath = parts.slice(0, -1).join('/');
+      const parentId = `topic:${parentPath}`;
+      const childId = `topic:${topic.path}`;
+      if (nodesMap.has(parentId)) {
+        const edgeId = `${parentId}->subtopic->${childId}`;
+        edgesMap.set(edgeId, {
+          id: edgeId,
+          from: parentId,
+          to: childId,
+          type: 'subtopic',
+        });
       }
     }
   }
 
-  if (edgesData) {
-    for (const [fromId, targets] of Object.entries(edgesData)) {
+  // 3. Add on-chain graph nodes (explorations)
+  if (graphNodes) {
+    for (const [nodeId, data] of Object.entries(graphNodes)) {
+      if (!data || typeof data !== 'object') continue;
+      nodesMap.set(nodeId, {
+        id: nodeId,
+        label: 'Exploration',
+        properties: { ...data, id: nodeId },
+      });
+
+      // Create exploration -> topic edge
+      const topicPath = data.topic_path;
+      if (topicPath) {
+        const topicId = `topic:${topicPath}`;
+        // Ensure topic node exists even if not in topic tree
+        if (!nodesMap.has(topicId)) {
+          nodesMap.set(topicId, {
+            id: topicId,
+            label: 'Topic',
+            properties: { id: topicId, title: topicPath, topic_path: topicPath },
+          });
+        }
+        const edgeId = `${nodeId}->in_topic->${topicId}`;
+        edgesMap.set(edgeId, {
+          id: edgeId,
+          from: nodeId,
+          to: topicId,
+          type: 'in_topic',
+        });
+      }
+    }
+  }
+
+  // 4. Add on-chain explicit edges (extends, related, prerequisite)
+  if (graphEdges) {
+    const seen = new Set<string>();
+    for (const [fromId, targets] of Object.entries(graphEdges)) {
       if (!targets || typeof targets !== 'object') continue;
       for (const [toId, edgeData] of Object.entries(targets)) {
         if (!edgeData || typeof edgeData !== 'object') continue;
-        edges.push({
-          id: `${fromId}->${toId}`,
+        // Deduplicate bidirectional edges
+        const canonical = [fromId, toId].sort().join('<->');
+        if (seen.has(canonical)) continue;
+        seen.add(canonical);
+        const edgeId = `${fromId}->${toId}`;
+        edgesMap.set(edgeId, {
+          id: edgeId,
           from: fromId,
           to: toId,
           type: edgeData.type || 'related',
@@ -50,53 +142,96 @@ function buildGraphFromOnchain(
     }
   }
 
-  return { nodes, edges };
+  // 5. Add user nodes and explored_by edges from explorations data
+  if (explorationsData) {
+    for (const [address, topics] of Object.entries(explorationsData as Record<string, any>)) {
+      if (!topics || typeof topics !== 'object') continue;
+      const userId = `user:${address}`;
+      if (!nodesMap.has(userId)) {
+        nodesMap.set(userId, {
+          id: userId,
+          label: 'User',
+          properties: { id: userId, address, name: `${address.slice(0, 8)}...` },
+        });
+      }
+
+      for (const [topicKey, entries] of Object.entries(topics as Record<string, any>)) {
+        if (!entries || typeof entries !== 'object') continue;
+        const topicPath = topicKey.replace(/\|/g, '/');
+        const topicId = `topic:${topicPath}`;
+
+        // User -> topic edge
+        const utEdgeId = `${userId}->explored->${topicId}`;
+        if (!edgesMap.has(utEdgeId)) {
+          edgesMap.set(utEdgeId, {
+            id: utEdgeId,
+            from: userId,
+            to: topicId,
+            type: 'explored',
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    nodes: Array.from(nodesMap.values()),
+    edges: Array.from(edgesMap.values()),
+  };
 }
 
+// -- public API ---------------------------------------------------------------
+
 export async function getKnowledgeGraph(): Promise<GraphData> {
-  const [nodesData, edgesData] = await Promise.all([
+  const [graphNodes, graphEdges, topicsData, explorationsData] = await Promise.all([
     getValue('/apps/knowledge/graph/nodes').catch(() => null),
     getValue('/apps/knowledge/graph/edges').catch(() => null),
+    getValue('/apps/knowledge/topics').catch(() => null),
+    getValue('/apps/knowledge/explorations').catch(() => null),
   ]);
-  return buildGraphFromOnchain(nodesData, edgesData);
+  return buildFullGraph(graphNodes, graphEdges, topicsData, explorationsData);
 }
 
 export async function getTopicSubgraph(topicPath: string): Promise<GraphData> {
   const graph = await getKnowledgeGraph();
+  const topicId = `topic:${topicPath}`;
   const topicKey = topicPath.replace(/\//g, '|');
 
-  // Filter nodes that belong to this topic (topic_path contains the topicKey)
-  const relevantNodes = graph.nodes.filter((n) => {
-    const tp = n.properties.topic_path || '';
-    return tp === topicPath || tp === topicKey || n.id.includes(topicKey.replace(/\|/g, '_'));
-  });
+  // Collect relevant nodes: the topic + its explorations + connected nodes
+  const relevantNodeIds = new Set<string>();
 
-  const nodeIds = new Set(relevantNodes.map((n) => n.id));
-
-  // Filter edges where both endpoints are in the relevant set
-  const relevantEdges = graph.edges.filter(
-    (e) => nodeIds.has(e.from) || nodeIds.has(e.to)
-  );
-
-  // Also include nodes referenced by edges
-  for (const edge of relevantEdges) {
-    if (!nodeIds.has(edge.from)) {
-      const n = graph.nodes.find((x) => x.id === edge.from);
-      if (n) { relevantNodes.push(n); nodeIds.add(n.id); }
-    }
-    if (!nodeIds.has(edge.to)) {
-      const n = graph.nodes.find((x) => x.id === edge.to);
-      if (n) { relevantNodes.push(n); nodeIds.add(n.id); }
+  // Add the topic itself and subtopics
+  for (const node of graph.nodes) {
+    if (node.id === topicId) {
+      relevantNodeIds.add(node.id);
+    } else if (node.id.startsWith(`topic:${topicPath}/`)) {
+      relevantNodeIds.add(node.id);
+    } else if (node.label === 'Exploration') {
+      const tp = node.properties.topic_path || '';
+      if (tp === topicPath || tp === topicKey || node.id.includes(topicKey.replace(/\|/g, '_'))) {
+        relevantNodeIds.add(node.id);
+      }
     }
   }
 
-  return { nodes: relevantNodes, edges: relevantEdges };
+  // Find edges touching these nodes
+  const relevantEdges = graph.edges.filter(
+    (e) => relevantNodeIds.has(e.from) || relevantNodeIds.has(e.to)
+  );
+
+  // Include connected nodes from edges
+  for (const edge of relevantEdges) {
+    relevantNodeIds.add(edge.from);
+    relevantNodeIds.add(edge.to);
+  }
+
+  const nodes = graph.nodes.filter((n) => relevantNodeIds.has(n.id));
+  return { nodes, edges: relevantEdges };
 }
 
 export async function getExplorationNeighbors(nodeId: string): Promise<GraphData> {
   const graph = await getKnowledgeGraph();
 
-  // Find the node and all directly connected edges
   const connectedEdges = graph.edges.filter(
     (e) => e.from === nodeId || e.to === nodeId
   );
@@ -108,7 +243,6 @@ export async function getExplorationNeighbors(nodeId: string): Promise<GraphData
   }
 
   const nodes = graph.nodes.filter((n) => nodeIds.has(n.id));
-
   return { nodes, edges: connectedEdges };
 }
 
@@ -116,10 +250,9 @@ export async function getGraphStats(): Promise<GraphStats> {
   const [topicsData, explorationsData, graphData] = await Promise.all([
     getValue('/apps/knowledge/topics').catch(() => null),
     getValue('/apps/knowledge/explorations').catch(() => null),
-    getKnowledgeGraph().catch(() => ({ nodes: [], edges: [] })),
+    getValue('/apps/knowledge/graph/nodes').catch(() => null),
   ]);
 
-  // Count topics recursively
   function countTopics(obj: any): number {
     if (!obj || typeof obj !== 'object') return 0;
     let count = 0;
@@ -132,7 +265,6 @@ export async function getGraphStats(): Promise<GraphStats> {
     return count;
   }
 
-  // Count explorations and unique users
   let explorationCount = 0;
   const users = new Set<string>();
   if (explorationsData && typeof explorationsData === 'object') {
@@ -150,10 +282,17 @@ export async function getGraphStats(): Promise<GraphStats> {
     }
   }
 
+  const graphNodeCount = graphData ? Object.keys(graphData).length : 0;
+
+  // Use the higher of topic count or graph node count for edges estimate
+  const edgeCount = graphData
+    ? Object.keys(graphData).length
+    : 0;
+
   return {
     topicCount: countTopics(topicsData),
-    explorationCount,
-    edgeCount: graphData.edges.length,
+    explorationCount: Math.max(explorationCount, graphNodeCount),
+    edgeCount,
     userCount: users.size,
   };
 }

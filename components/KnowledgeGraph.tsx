@@ -20,6 +20,9 @@ const EDGE_COLORS: Record<string, string> = {
   extends: '#EF4444',      // red
   related: '#8B5CF6',      // purple
   prerequisite: '#F59E0B', // amber
+  in_topic: '#60A5FA',     // light blue
+  subtopic: '#93C5FD',     // lighter blue
+  explored: '#34D399',     // light green
 };
 
 interface SimNode {
@@ -296,12 +299,13 @@ export default function KnowledgeGraph({ data, height = '500px', onNodeClick }: 
     }
 
     if (node.label === 'Topic') {
-      const topicPath = node.properties.topic_path || node.id;
+      const topicPath = node.properties.topic_path || node.id.replace(/^topic:/, '');
       router.push(`/knowledge/${encodeURIComponent(topicPath)}`);
     } else if (node.label === 'Exploration') {
       router.push(`/knowledge/exploration/${encodeURIComponent(node.id)}`);
     } else if (node.label === 'User') {
-      router.push(`/accounts/${node.properties.address || node.id}`);
+      const address = node.properties.address || node.id.replace(/^user:/, '');
+      router.push(`/accounts/${address}`);
     }
   }, [onNodeClick, router]);
 
