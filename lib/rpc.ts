@@ -16,7 +16,11 @@ export async function rpc(method: string, params: Record<string, any> = {}): Pro
   });
   const json = await res.json();
   if (json.error) throw new Error(json.error.message);
-  return json.result?.result ?? json.result;
+  const wrapper = json.result;
+  if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
+    throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
+  }
+  return wrapper?.result ?? wrapper;
 }
 
 // Block methods

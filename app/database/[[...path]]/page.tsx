@@ -46,7 +46,25 @@ export default function DatabasePage({
       setLoading((prev) => ({ ...prev, [tab]: true }));
       setErrors((prev) => ({ ...prev, [tab]: null }));
       try {
-        const result = await rpc('ain_get', { type: rpcType, ref: dbPath });
+        let result;
+        try {
+          result = await rpc('ain_get', { type: rpcType, ref: dbPath });
+        } catch {
+          // Retry with shallow fetch for large nodes
+          result = await rpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+        }
+        // Strip #state_ph placeholders from shallow results, keeping only key names
+        if (result && typeof result === 'object') {
+          const cleaned: Record<string, any> = {};
+          for (const [key, val] of Object.entries(result)) {
+            if (typeof val === 'object' && val !== null && '#state_ph' in (val as any)) {
+              cleaned[key] = { '...': '(click to expand)' };
+            } else {
+              cleaned[key] = val;
+            }
+          }
+          result = cleaned;
+        }
         setData((prev) => ({ ...prev, [tab]: result }));
       } catch (err: any) {
         setErrors((prev) => ({
