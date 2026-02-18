@@ -1,48 +1,70 @@
-import { getLastBlockNumber, getBlockByNumber } from '@/lib/rpc';
+import { getLastBlockNumber, getBlockByNumber, getBlockList, getBlockTransactionCountByNumber } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
 
 export const revalidate = 10;
 
-const BLOCKS_TO_FETCH = 10;
+const MAX_TX = 50;
+const SCAN_BATCH = 100;
+const MAX_SCAN = 5000;
 
-export default async function TransactionsPage() {
-  const lastBlock = await getLastBlockNumber();
-  const from = Math.max(0, lastBlock - BLOCKS_TO_FETCH + 1);
-
-  // Fetch blocks individually with full transaction data
-  const blockPromises = [];
-  for (let i = lastBlock; i >= from; i--) {
-    blockPromises.push(getBlockByNumber(i, true).catch(() => null));
-  }
-  const blocks = (await Promise.all(blockPromises)).filter(Boolean);
-
+async function findRecentTransactions(lastBlock: number): Promise<{ transactions: any[]; scannedBlocks: number }> {
   const transactions: any[] = [];
-  for (const block of blocks) {
-    if (block.transactions && Array.isArray(block.transactions)) {
-      for (const tx of block.transactions) {
+  let scannedBlocks = 0;
+
+  // Scan backwards in batches to find blocks with transactions
+  for (let end = lastBlock; end >= 0 && transactions.length < MAX_TX && scannedBlocks < MAX_SCAN; ) {
+    const start = Math.max(0, end - SCAN_BATCH + 1);
+    const blocks = await getBlockList(start, end).catch(() => []);
+    scannedBlocks += end - start + 1;
+
+    if (!Array.isArray(blocks)) break;
+
+    // Sort descending by block number
+    const sorted = [...blocks].sort((a: any, b: any) => b.number - a.number);
+
+    // Find blocks that have transactions (array with length > 0)
+    const blocksWithTx = sorted.filter(
+      (b: any) => b.transactions && Array.isArray(b.transactions) && b.transactions.length > 0
+    );
+
+    // Fetch full blocks for those with transactions
+    for (const block of blocksWithTx) {
+      if (transactions.length >= MAX_TX) break;
+      const fullBlock = await getBlockByNumber(block.number, true).catch(() => null);
+      if (!fullBlock?.transactions) continue;
+      for (const tx of fullBlock.transactions) {
         if (typeof tx === 'object') {
           transactions.push({
             ...tx,
-            block_number: block.number,
-            timestamp: tx.timestamp || block.timestamp,
+            block_number: fullBlock.number,
+            timestamp: tx.timestamp || fullBlock.timestamp,
           });
         }
       }
     }
+
+    end = start - 1;
   }
+
+  return { transactions, scannedBlocks };
+}
+
+export default async function TransactionsPage() {
+  const lastBlock = await getLastBlockNumber();
+  const { transactions, scannedBlocks } = await findRecentTransactions(lastBlock);
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Recent Transactions</h1>
       <p className="text-sm text-gray-500">
-        Showing transactions from the latest {BLOCKS_TO_FETCH} blocks ({transactions.length} transactions found).
+        Found {transactions.length} transactions (scanned {scannedBlocks.toLocaleString()} blocks from #{lastBlock}).
       </p>
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
         {transactions.length > 0 ? (
           <TransactionsTable transactions={transactions} />
         ) : (
           <p className="px-4 py-8 text-center text-gray-500 text-sm">
-            No transactions found in recent blocks.
+            No transactions found in the last {scannedBlocks.toLocaleString()} blocks.
           </p>
         )}
       </div>

@@ -61,11 +61,17 @@ export default function DatabasePage({
       setErrors((prev) => ({ ...prev, [tab]: null }));
       try {
         let result;
-        try {
-          result = await clientRpc('ain_get', { type: rpcType, ref: dbPath });
-        } catch {
-          // Retry with shallow fetch for large nodes
+        // For root and shallow paths, always start with shallow fetch to avoid timeout
+        const depth = dbPath.split('/').filter(Boolean).length;
+        if (depth <= 2) {
           result = await clientRpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+        } else {
+          try {
+            result = await clientRpc('ain_get', { type: rpcType, ref: dbPath });
+          } catch {
+            // Fallback to shallow for large deep nodes
+            result = await clientRpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+          }
         }
         // Strip #state_ph placeholders from shallow results, keeping only key names
         if (result && typeof result === 'object') {
