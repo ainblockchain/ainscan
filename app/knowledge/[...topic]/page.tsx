@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getValue } from '@/lib/rpc';
-import { getTopicSubgraph } from '@/lib/neo4j';
+import { getTopicSubgraph } from '@/lib/knowledge';
 import { KnowledgeTopic, KnowledgeExploration, GraphData } from '@/lib/types';
 import TopicGraphView from './TopicGraphView';
 

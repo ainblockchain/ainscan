@@ -1,5 +1,5 @@
 import { getValue } from '@/lib/rpc';
-import { getExplorationNeighbors } from '@/lib/neo4j';
+import { getExplorationNeighbors } from '@/lib/knowledge';
 import { KnowledgeExploration, GraphData } from '@/lib/types';
 import ExplorationDetail from './ExplorationDetail';
 

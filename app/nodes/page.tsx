@@ -13,6 +13,7 @@ export default async function NodesPage() {
 
   if (validatorsRaw && typeof validatorsRaw === 'object') {
     for (const [address, info] of Object.entries(validatorsRaw)) {
+      if (!info) continue;
       const v = info as any;
       nodes.push({
         address,

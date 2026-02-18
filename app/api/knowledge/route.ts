@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryGraph, getKnowledgeGraph, getTopicSubgraph, getExplorationNeighbors, getGraphStats } from '@/lib/neo4j';
+import { getKnowledgeGraph, getTopicSubgraph, getExplorationNeighbors, getGraphStats } from '@/lib/knowledge';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, query, params } = body;
+    const { action, params } = body;
 
     switch (action) {
       case 'stats':
@@ -25,17 +25,11 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json(await getExplorationNeighbors(params.nodeId));
 
-      case 'query':
-        if (!query) {
-          return NextResponse.json({ error: 'query required' }, { status: 400 });
-        }
-        return NextResponse.json(await queryGraph(query, params || {}));
-
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }
   } catch (error: any) {
-    console.error('Neo4j API error:', error);
+    console.error('Knowledge API error:', error);
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

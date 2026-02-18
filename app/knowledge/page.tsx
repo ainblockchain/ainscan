@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getValue } from '@/lib/rpc';
-import { getGraphStats, getKnowledgeGraph } from '@/lib/neo4j';
+import { getGraphStats, getKnowledgeGraph } from '@/lib/knowledge';
 import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
 import KnowledgeGraphView from './KnowledgeGraphView';
 
@@ -34,11 +34,12 @@ function flattenTopics(
   obj: Record<string, any>,
   prefix: string[] = []
 ): { path: string; info: KnowledgeTopic }[] {
+  if (!obj || typeof obj !== 'object') return [];
   const results: { path: string; info: KnowledgeTopic }[] = [];
   for (const [key, value] of Object.entries(obj)) {
-    if (key === '.info') continue;
+    if (key === '.info' || !value || typeof value !== 'object') continue;
     const currentPath = [...prefix, key];
-    if (value && value['.info']) {
+    if (value['.info']) {
       results.push({ path: currentPath.join('/'), info: value['.info'] });
     }
     // Recurse into subtopics
