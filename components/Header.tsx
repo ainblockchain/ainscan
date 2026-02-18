@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/blocks', label: 'Blocks' },
   { href: '/transactions', label: 'Transactions' },
   { href: '/nodes', label: 'Nodes' },
+  { href: '/knowledge', label: 'Knowledge' },
   { href: '/database', label: 'Database' },
 ];
 

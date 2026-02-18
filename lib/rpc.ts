@@ -1,4 +1,4 @@
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet-api.ainetwork.ai/json-rpc';
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'http://localhost:8081/json-rpc';
 
 let requestId = 0;
 

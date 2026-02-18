@@ -59,3 +59,52 @@ export interface NetworkStats {
   peerCount: number;
   consensusState: string;
 }
+
+// Knowledge graph types
+
+export interface KnowledgeTopic {
+  title: string;
+  description: string;
+  created_at: number;
+  created_by: string;
+}
+
+export interface KnowledgeExploration {
+  topic_path: string;
+  title: string;
+  content: string | null;
+  summary: string;
+  depth: number;
+  tags: string | null;
+  price: string | null;
+  gateway_url: string | null;
+  content_hash: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  properties: Record<string, any>;
+}
+
+export interface GraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  type: string;
+  properties?: Record<string, any>;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface GraphStats {
+  topicCount: number;
+  explorationCount: number;
+  edgeCount: number;
+  userCount: number;
+}
