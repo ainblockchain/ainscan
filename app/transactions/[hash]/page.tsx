@@ -61,8 +61,19 @@ export default async function TransactionDetailPage({
   searchParams: { block?: string };
 }) {
   // Try getTransactionByHash first (works when tx index is enabled)
+  // Response may be a wrapper: { state, number, transaction: { tx_body, hash, address }, receipt }
   let tx = await getTransactionByHash(params.hash)
-    .then((raw) => raw ? normalizeTx(raw) : null)
+    .then((raw) => {
+      if (!raw) return null;
+      if (raw.transaction && typeof raw.transaction === 'object') {
+        // Unwrap: actual tx is inside raw.transaction
+        const unwrapped = normalizeTx(raw.transaction, raw.number, raw.timestamp);
+        unwrapped.exec_result = unwrapped.exec_result || raw.exec_result;
+        unwrapped.receipt = unwrapped.receipt || raw.receipt;
+        return unwrapped;
+      }
+      return normalizeTx(raw);
+    })
     .catch(() => null);
 
   // Fallback: fetch from specific block if block number is provided
