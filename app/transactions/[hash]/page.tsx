@@ -1,15 +1,80 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getTransactionByHash } from '@/lib/rpc';
+import { getTransactionByHash, getBlockByNumber, getLastBlockNumber, getBlockList } from '@/lib/rpc';
 import { formatTimestamp, getOperationType } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
 
+/** Normalize a raw transaction object into a flat shape. */
+function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
+  const txBody = raw.tx_body || {};
+  return {
+    hash: raw.hash,
+    address: raw.address,
+    block_number: raw.block_number ?? blockNumber,
+    timestamp: raw.timestamp ?? txBody.timestamp ?? blockTimestamp,
+    nonce: raw.nonce ?? txBody.nonce,
+    gas_price: raw.gas_price ?? txBody.gas_price,
+    operation: raw.operation ?? txBody.operation,
+    parent_tx_hash: raw.parent_tx_hash ?? txBody.parent_tx_hash,
+    exec_result: raw.exec_result,
+    receipt: raw.receipt,
+  };
+}
+
+/** Try to find a transaction by hash in a specific block. */
+async function findTxInBlock(blockNumber: number, hash: string) {
+  const block = await getBlockByNumber(blockNumber, true).catch(() => null);
+  if (!block?.transactions) return null;
+  for (const tx of block.transactions) {
+    if (typeof tx === 'object' && tx.hash === hash) {
+      return normalizeTx(tx, block.number, block.timestamp);
+    }
+  }
+  return null;
+}
+
+/** Scan recent blocks to find a transaction by hash. */
+async function scanForTx(hash: string) {
+  const lastBlock = await getLastBlockNumber().catch(() => 0);
+  if (!lastBlock) return null;
+
+  for (let end = lastBlock; end >= 0; ) {
+    const start = Math.max(0, end - 19);
+    const blocks = await getBlockList(start, end).catch(() => []);
+    if (!Array.isArray(blocks)) break;
+    for (const b of blocks) {
+      if (b.transactions?.length > 0) {
+        const found = await findTxInBlock(b.number, hash);
+        if (found) return found;
+      }
+    }
+    end = start - 1;
+  }
+  return null;
+}
+
 export default async function TransactionDetailPage({
   params,
+  searchParams,
 }: {
   params: { hash: string };
+  searchParams: { block?: string };
 }) {
-  const tx = await getTransactionByHash(params.hash).catch(() => null);
+  // Try getTransactionByHash first (works when tx index is enabled)
+  let tx = await getTransactionByHash(params.hash)
+    .then((raw) => raw ? normalizeTx(raw) : null)
+    .catch(() => null);
+
+  // Fallback: fetch from specific block if block number is provided
+  if (!tx && searchParams.block) {
+    tx = await findTxInBlock(parseInt(searchParams.block, 10), params.hash);
+  }
+
+  // Last resort: scan blocks
+  if (!tx) {
+    tx = await scanForTx(params.hash);
+  }
+
   if (!tx) notFound();
 
   const opType = getOperationType(tx);
@@ -19,17 +84,17 @@ export default async function TransactionDetailPage({
     {
       label: 'Block',
       value: tx.block_number,
-      link: `/blocks/${tx.block_number}`,
+      link: tx.block_number != null ? `/blocks/${tx.block_number}` : undefined,
     },
-    { label: 'Timestamp', value: formatTimestamp(tx.timestamp) },
+    { label: 'Timestamp', value: tx.timestamp ? formatTimestamp(tx.timestamp) : '-' },
     {
       label: 'From',
       value: tx.address,
       mono: true,
-      link: `/accounts/${tx.address}`,
+      link: tx.address ? `/accounts/${tx.address}` : undefined,
       copy: true,
     },
-    { label: 'Nonce', value: tx.nonce },
+    { label: 'Nonce', value: tx.nonce ?? '-' },
     { label: 'Operation Type', value: opType },
   ];
 

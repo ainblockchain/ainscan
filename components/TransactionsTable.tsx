@@ -45,7 +45,7 @@ export default function TransactionsTable({
             <tr key={tx.hash} className="hover:bg-gray-50">
               <td className="px-4 py-3 text-sm">
                 <Link
-                  href={`/transactions/${tx.hash}`}
+                  href={`/transactions/${tx.hash}${tx.block_number != null ? `?block=${tx.block_number}` : ''}`}
                   className="text-blue-600 hover:underline font-mono"
                 >
                   {truncateHash(tx.hash)}
