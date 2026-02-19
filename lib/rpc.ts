@@ -1,4 +1,5 @@
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://devnet-api.ainetwork.ai/json-rpc';
+const REST_BASE = RPC_URL.replace(/\/json-rpc$/, '');
 
 let requestId = 0;
 
@@ -122,4 +123,21 @@ export async function matchRule(ref: string): Promise<any> {
 
 export async function matchOwner(ref: string): Promise<any> {
   return rpc('ain_matchOwner', { ref });
+}
+
+// REST API helpers
+async function rest(path: string): Promise<any> {
+  const res = await fetch(`${REST_BASE}${path}`, { next: { revalidate: 10 } });
+  const json = await res.json();
+  return json.result ?? json;
+}
+
+export async function getRecentBlocksWithTransactions(count: number = 10): Promise<any[]> {
+  const result = await rest(`/recent_blocks_with_transactions?count=${count}`);
+  return Array.isArray(result) ? result : [];
+}
+
+export async function getRecentTransactions(count: number = 50): Promise<any[]> {
+  const result = await rest(`/recent_transactions?count=${count}`);
+  return Array.isArray(result) ? result : [];
 }
