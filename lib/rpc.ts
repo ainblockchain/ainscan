@@ -15,7 +15,10 @@ export async function rpc(method: string, params: Record<string, any> = {}): Pro
     }),
     next: { revalidate: 10 },
   });
-  const json = await res.json();
+  if (!res.ok) throw new Error(`RPC HTTP ${res.status}: ${res.statusText}`);
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error(`RPC non-JSON response: ${text.slice(0, 100)}`); }
   if (json.error) throw new Error(json.error.message);
   const wrapper = json.result;
   if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
@@ -128,28 +131,112 @@ export async function matchOwner(ref: string): Promise<any> {
 // REST API helpers
 async function rest(path: string): Promise<any> {
   const res = await fetch(`${REST_BASE}${path}`, { next: { revalidate: 10 } });
+  if (!res.ok) throw new Error(`REST HTTP ${res.status}`);
   const json = await res.json();
   return json.result ?? json;
 }
 
 export async function getRecentBlocksWithTransactions(count: number = 10): Promise<any[]> {
-  const result = await rest(`/recent_blocks_with_transactions?count=${count}`);
-  return Array.isArray(result) ? result : [];
+  // Try REST endpoint first
+  const result = await rest(`/recent_blocks_with_transactions?count=${count}`).catch(() => []);
+  if (Array.isArray(result) && result.length > 0) return result;
+  // Fallback: scan blocks
+  return scanRecentBlocksWithTransactions(count);
+}
+
+/** Scan blocks backwards to find blocks with transactions (fallback). */
+async function scanRecentBlocksWithTransactions(count: number): Promise<any[]> {
+  const lastBlock = await getLastBlockNumber().catch(() => 0);
+  if (!lastBlock) return [];
+
+  const found: any[] = [];
+  for (let end = lastBlock; end >= 0 && found.length < count; ) {
+    const batchPromises = [];
+    for (let i = 0; i < 8 && end >= 0; i++) {
+      const batchEnd = end;
+      const batchStart = Math.max(0, end - 19);
+      batchPromises.push(getBlockList(batchStart, batchEnd).catch(() => []));
+      end = batchStart - 1;
+    }
+    const batches = await Promise.all(batchPromises);
+    for (const blocks of batches) {
+      if (!Array.isArray(blocks)) continue;
+      for (const b of blocks) {
+        if (b.transactions?.length > 0 && found.length < count) {
+          found.push(b);
+        }
+      }
+    }
+  }
+  return found.sort((a, b) => b.number - a.number);
 }
 
 export async function getRecentTransactions(count: number = 50): Promise<any[]> {
-  const result = await rest(`/recent_transactions?count=${count}`);
-  if (!Array.isArray(result)) return [];
-  // Flatten nested structure: { block_number, block_timestamp, transaction: { hash, address, tx_body } }
-  // into the flat shape TransactionsTable expects: { hash, address, block_number, timestamp, operation }
-  return result.map((entry: any) => {
-    const tx = entry.transaction || {};
-    return {
-      hash: tx.hash,
-      address: tx.address,
-      block_number: entry.block_number,
-      timestamp: tx.tx_body?.timestamp || entry.block_timestamp,
-      operation: tx.tx_body?.operation,
-    };
-  });
+  // Try REST endpoint first
+  const result = await rest(`/recent_transactions?count=${count}`).catch(() => []);
+  if (Array.isArray(result) && result.length > 0) {
+    return result.map((entry: any) => {
+      const tx = entry.transaction || {};
+      return {
+        hash: tx.hash,
+        address: tx.address,
+        block_number: entry.block_number,
+        timestamp: tx.tx_body?.timestamp || entry.block_timestamp,
+        operation: tx.tx_body?.operation,
+      };
+    });
+  }
+  // Fallback: scan blocks for transactions
+  return scanRecentTransactions(count);
+}
+
+/** Scan blocks backwards to find transactions (fallback when REST index is empty). */
+export async function scanRecentTransactions(count: number = 50): Promise<any[]> {
+  const lastBlock = await getLastBlockNumber().catch(() => 0);
+  if (!lastBlock) return [];
+
+  const transactions: any[] = [];
+  for (let end = lastBlock; end >= 0 && transactions.length < count; ) {
+    // Fetch 8 batches of 20 blocks in parallel
+    const batchPromises = [];
+    for (let i = 0; i < 8 && end >= 0; i++) {
+      const batchEnd = end;
+      const batchStart = Math.max(0, end - 19);
+      batchPromises.push(
+        getBlockList(batchStart, batchEnd).catch(() => [])
+      );
+      end = batchStart - 1;
+    }
+    const batches = await Promise.all(batchPromises);
+
+    const blocksWithTx: number[] = [];
+    for (const blocks of batches) {
+      if (!Array.isArray(blocks)) continue;
+      for (const b of blocks) {
+        if (b.transactions?.length > 0) blocksWithTx.push(b.number);
+      }
+    }
+    blocksWithTx.sort((a, b) => b - a);
+
+    const fullBlocks = await Promise.all(
+      blocksWithTx.slice(0, count - transactions.length)
+        .map((n) => getBlockByNumber(n, true).catch(() => null))
+    );
+
+    for (const block of fullBlocks) {
+      if (!block?.transactions) continue;
+      for (const tx of block.transactions) {
+        if (typeof tx === 'object') {
+          transactions.push({
+            hash: tx.hash,
+            address: tx.address,
+            block_number: block.number,
+            timestamp: tx.tx_body?.timestamp || block.timestamp,
+            operation: tx.tx_body?.operation,
+          });
+        }
+      }
+    }
+  }
+  return transactions.slice(0, count);
 }

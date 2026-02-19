@@ -5,6 +5,7 @@ interface PaginationProps {
   currentPage: number;
   hasNext: boolean;
   hasPrev: boolean;
+  extraParams?: Record<string, string>;
 }
 
 export default function Pagination({
@@ -12,14 +13,20 @@ export default function Pagination({
   currentPage,
   hasNext,
   hasPrev,
+  extraParams = {},
 }: PaginationProps) {
+  function buildHref(page: number) {
+    const params = new URLSearchParams({ ...extraParams, page: String(page) });
+    return `${basePath}?${params.toString()}`;
+  }
+
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="text-sm text-gray-500">Page {currentPage}</div>
       <div className="flex gap-2">
         {hasPrev ? (
           <Link
-            href={`${basePath}?page=${currentPage - 1}`}
+            href={buildHref(currentPage - 1)}
             className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Previous
@@ -31,7 +38,7 @@ export default function Pagination({
         )}
         {hasNext ? (
           <Link
-            href={`${basePath}?page=${currentPage + 1}`}
+            href={buildHref(currentPage + 1)}
             className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Next
