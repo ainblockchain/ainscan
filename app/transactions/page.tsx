@@ -1,36 +1,53 @@
-import { getLastBlockNumber, getBlockByNumber, getBlockList, getBlockTransactionCountByNumber } from '@/lib/rpc';
+import { getLastBlockNumber, getBlockByNumber, getBlockList } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_TX = 50;
-const SCAN_BATCH = 20; // ain_getBlockList returns at most 20 blocks per call
-const MAX_SCAN = 5000;
+const BATCH = 20; // ain_getBlockList returns at most 20 blocks per call
+const PARALLEL = 8; // number of parallel batch requests
 
 async function findRecentTransactions(lastBlock: number): Promise<{ transactions: any[]; scannedBlocks: number }> {
   const transactions: any[] = [];
   let scannedBlocks = 0;
+  let end = lastBlock;
 
-  // Scan backwards in batches to find blocks with transactions
-  for (let end = lastBlock; end >= 0 && transactions.length < MAX_TX && scannedBlocks < MAX_SCAN; ) {
-    const start = Math.max(0, end - SCAN_BATCH + 1);
-    const blocks = await getBlockList(start, end).catch(() => []);
-    scannedBlocks += end - start + 1;
+  // Scan backwards in parallel batches to find blocks with transactions
+  while (end >= 0 && transactions.length < MAX_TX) {
+    // Fire PARALLEL batch requests at once
+    const batchPromises = [];
+    for (let i = 0; i < PARALLEL && end >= 0; i++) {
+      const batchEnd = end;
+      const batchStart = Math.max(0, end - BATCH + 1);
+      batchPromises.push(
+        getBlockList(batchStart, batchEnd)
+          .then((blocks) => ({ blocks: Array.isArray(blocks) ? blocks : [], start: batchStart, end: batchEnd }))
+          .catch(() => ({ blocks: [] as any[], start: batchStart, end: batchEnd }))
+      );
+      scannedBlocks += batchEnd - batchStart + 1;
+      end = batchStart - 1;
+    }
 
-    if (!Array.isArray(blocks)) break;
+    const results = await Promise.all(batchPromises);
 
-    // Sort descending by block number
-    const sorted = [...blocks].sort((a: any, b: any) => b.number - a.number);
+    // Collect all blocks with transactions, sorted descending
+    const blocksWithTx: any[] = [];
+    for (const { blocks } of results) {
+      for (const b of blocks) {
+        if (b.transactions && Array.isArray(b.transactions) && b.transactions.length > 0) {
+          blocksWithTx.push(b);
+        }
+      }
+    }
+    blocksWithTx.sort((a, b) => b.number - a.number);
 
-    // Find blocks that have transactions (array with length > 0)
-    const blocksWithTx = sorted.filter(
-      (b: any) => b.transactions && Array.isArray(b.transactions) && b.transactions.length > 0
-    );
+    // Fetch full blocks in parallel
+    const fullBlockPromises = blocksWithTx
+      .slice(0, MAX_TX - transactions.length)
+      .map((b) => getBlockByNumber(b.number, true).catch(() => null));
+    const fullBlocks = await Promise.all(fullBlockPromises);
 
-    // Fetch full blocks for those with transactions
-    for (const block of blocksWithTx) {
-      if (transactions.length >= MAX_TX) break;
-      const fullBlock = await getBlockByNumber(block.number, true).catch(() => null);
+    for (const fullBlock of fullBlocks) {
       if (!fullBlock?.transactions) continue;
       for (const tx of fullBlock.transactions) {
         if (typeof tx === 'object') {
@@ -42,8 +59,6 @@ async function findRecentTransactions(lastBlock: number): Promise<{ transactions
         }
       }
     }
-
-    end = start - 1;
   }
 
   return { transactions, scannedBlocks };
