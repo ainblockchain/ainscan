@@ -8,13 +8,14 @@ import TransactionsTable from '@/components/TransactionsTable';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [blockNumber, peerCount, consensusStatus, recentBlocks, recentTxs] = await Promise.all([
-    getLastBlockNumber().catch(() => 0),
+  // Fetch sequentially to avoid rate limiting on devnet
+  const blockNumber = await getLastBlockNumber().catch(() => 0);
+  const [peerCount, consensusStatus] = await Promise.all([
     getPeerCount().catch(() => null),
     getConsensusStatus().catch(() => null),
-    getRecentBlocksWithTransactions(10).catch(() => []),
-    getRecentTransactions(10).catch(() => []),
   ]);
+  const recentBlocks = await getRecentBlocksWithTransactions(10).catch(() => []);
+  const recentTxs = await getRecentTransactions(10).catch(() => []);
 
   const consensusState = consensusStatus?.state || consensusStatus?.status || null;
 

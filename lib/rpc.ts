@@ -3,28 +3,49 @@ const REST_BASE = RPC_URL.replace(/\/json-rpc$/, '');
 
 let requestId = 0;
 
+const MAX_RETRIES = 3;
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function rpc(method: string, params: Record<string, any> = {}): Promise<any> {
-  const res = await fetch(RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: ++requestId,
-      method,
-      params: { protoVer: '1.0.0', ...params },
-    }),
-    next: { revalidate: 10 },
-  });
-  if (!res.ok) throw new Error(`RPC HTTP ${res.status}: ${res.statusText}`);
-  const text = await res.text();
-  let json: any;
-  try { json = JSON.parse(text); } catch { throw new Error(`RPC non-JSON response: ${text.slice(0, 100)}`); }
-  if (json.error) throw new Error(json.error.message);
-  const wrapper = json.result;
-  if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
-    throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: ++requestId,
+        method,
+        params: { protoVer: '1.0.0', ...params },
+      }),
+      cache: 'no-store',
+    });
+    const text = await res.text();
+    // Retry on rate limit or non-JSON responses
+    let json: any;
+    try { json = JSON.parse(text); } catch {
+      if (attempt < MAX_RETRIES) {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+      throw new Error(`RPC non-JSON response: ${text.slice(0, 100)}`);
+    }
+    if (!res.ok) {
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+      throw new Error(`RPC HTTP ${res.status}: ${res.statusText}`);
+    }
+    if (json.error) throw new Error(json.error.message);
+    const wrapper = json.result;
+    if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
+      throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
+    }
+    return wrapper?.result ?? wrapper;
   }
-  return wrapper?.result ?? wrapper;
 }
 
 // Block methods
@@ -130,10 +151,23 @@ export async function matchOwner(ref: string): Promise<any> {
 
 // REST API helpers
 async function rest(path: string): Promise<any> {
-  const res = await fetch(`${REST_BASE}${path}`, { next: { revalidate: 10 } });
-  if (!res.ok) throw new Error(`REST HTTP ${res.status}`);
-  const json = await res.json();
-  return json.result ?? json;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(`${REST_BASE}${path}`, { cache: 'no-store' });
+    if (res.status === 429 && attempt < MAX_RETRIES) {
+      await sleep(1000 * (attempt + 1));
+      continue;
+    }
+    const text = await res.text();
+    let json: any;
+    try { json = JSON.parse(text); } catch {
+      if (attempt < MAX_RETRIES) {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+      throw new Error(`REST non-JSON: ${text.slice(0, 100)}`);
+    }
+    return json.result ?? json;
+  }
 }
 
 export async function getRecentBlocksWithTransactions(count: number = 10): Promise<any[]> {
@@ -152,7 +186,7 @@ async function scanRecentBlocksWithTransactions(count: number): Promise<any[]> {
   const found: any[] = [];
   for (let end = lastBlock; end >= 0 && found.length < count; ) {
     const batchPromises = [];
-    for (let i = 0; i < 8 && end >= 0; i++) {
+    for (let i = 0; i < 2 && end >= 0; i++) {
       const batchEnd = end;
       const batchStart = Math.max(0, end - 19);
       batchPromises.push(getBlockList(batchStart, batchEnd).catch(() => []));
@@ -199,7 +233,7 @@ export async function scanRecentTransactions(count: number = 50): Promise<any[]>
   for (let end = lastBlock; end >= 0 && transactions.length < count; ) {
     // Fetch 8 batches of 20 blocks in parallel
     const batchPromises = [];
-    for (let i = 0; i < 8 && end >= 0; i++) {
+    for (let i = 0; i < 2 && end >= 0; i++) {
       const batchEnd = end;
       const batchStart = Math.max(0, end - 19);
       batchPromises.push(
