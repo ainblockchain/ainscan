@@ -4,7 +4,7 @@ import { getTopicSubgraph } from '@/lib/knowledge';
 import { KnowledgeTopic, KnowledgeExploration, GraphData } from '@/lib/types';
 import TopicGraphView from './TopicGraphView';
 
-export const revalidate = 10;
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { topic: string[] };

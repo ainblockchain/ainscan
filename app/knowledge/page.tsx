@@ -4,7 +4,7 @@ import { getGraphStats, getKnowledgeGraph } from '@/lib/knowledge';
 import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
 import KnowledgeGraphView from './KnowledgeGraphView';
 
-export const revalidate = 10;
+export const dynamic = 'force-dynamic';
 
 async function getTopics(): Promise<Record<string, { '.info': KnowledgeTopic }>> {
   try {

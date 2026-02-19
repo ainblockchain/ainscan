@@ -3,7 +3,7 @@ import { getExplorationNeighbors } from '@/lib/knowledge';
 import { KnowledgeExploration, GraphData } from '@/lib/types';
 import ExplorationDetail from './ExplorationDetail';
 
-export const revalidate = 10;
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { id: string };

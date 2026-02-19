@@ -1,7 +1,7 @@
 import { getLastBlockNumber, getBlockByNumber, getBlockList, getBlockTransactionCountByNumber } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
 
-export const revalidate = 10;
+export const dynamic = 'force-dynamic';
 
 const MAX_TX = 50;
 const SCAN_BATCH = 20; // ain_getBlockList returns at most 20 blocks per call
