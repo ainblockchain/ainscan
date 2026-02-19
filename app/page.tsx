@@ -5,7 +5,7 @@ import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
 
-export const revalidate = 10;
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const [blockNumber, peerCount, consensusStatus, recentBlocks, recentTxs] = await Promise.all([

@@ -139,5 +139,17 @@ export async function getRecentBlocksWithTransactions(count: number = 10): Promi
 
 export async function getRecentTransactions(count: number = 50): Promise<any[]> {
   const result = await rest(`/recent_transactions?count=${count}`);
-  return Array.isArray(result) ? result : [];
+  if (!Array.isArray(result)) return [];
+  // Flatten nested structure: { block_number, block_timestamp, transaction: { hash, address, tx_body } }
+  // into the flat shape TransactionsTable expects: { hash, address, block_number, timestamp, operation }
+  return result.map((entry: any) => {
+    const tx = entry.transaction || {};
+    return {
+      hash: tx.hash,
+      address: tx.address,
+      block_number: entry.block_number,
+      timestamp: tx.tx_body?.timestamp || entry.block_timestamp,
+      operation: tx.tx_body?.operation,
+    };
+  });
 }
