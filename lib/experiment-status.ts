@@ -8,6 +8,7 @@ export interface ExperimentBlock {
 export interface ExperimentStatus {
   runId: string;
   nodeId: string;
+  channelId?: string;
   phase: string;
   updatedAt: number;
   targetTPS?: number;
@@ -21,6 +22,7 @@ export interface ExperimentStatus {
 
 export interface ExperimentSnapshot {
   runId: string;
+  channelId: string | null;
   phase: string;
   updatedAt: number;
   targetTPS: number;
@@ -68,6 +70,7 @@ export function recordExperimentStatus(input: Record<string, unknown>): Experime
   const status: ExperimentStatus = {
     runId,
     nodeId,
+    channelId: typeof input.channelId === 'string' ? input.channelId.slice(0, 128) : undefined,
     phase: String(input.phase || 'unknown').slice(0, 40),
     updatedAt: Date.now(),
     targetTPS: Math.max(0, finite(input.targetTPS, 7000)),
@@ -110,6 +113,7 @@ export function getExperimentSnapshot(runId?: string): ExperimentSnapshot | null
   const newest = nodes.reduce((latest, status) => status.updatedAt > latest.updatedAt ? status : latest, nodes[0]);
   return {
     runId: newest.runId,
+    channelId: nodes.find((status) => status.channelId)?.channelId || null,
     phase: nodes.some((status) => status.phase === 'running') ? 'running' : newest.phase,
     updatedAt: Math.max(...nodes.map((status) => status.updatedAt)),
     targetTPS: Math.max(...nodes.map((status) => status.targetTPS || 7000)),
