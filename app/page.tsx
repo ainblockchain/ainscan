@@ -4,6 +4,7 @@ import SearchBar from '@/components/SearchBar';
 import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
+import LiveExperimentMonitor from '@/components/LiveExperimentMonitor';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,8 @@ export default async function HomePage() {
         peerCount={peerCount}
         consensusState={consensusState}
       />
+
+      <LiveExperimentMonitor />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
