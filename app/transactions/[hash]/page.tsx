@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getTransactionByHash, getBlockByNumber, getLastBlockNumber, getBlockList } from '@/lib/rpc';
 import { formatTimestamp, getOperationType } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
+import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';
 
 /** Normalize a raw transaction object into a flat shape. */
 function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
@@ -89,6 +90,10 @@ export default async function TransactionDetailPage({
   if (!tx) notFound();
 
   const opType = getOperationType(tx);
+  const lesson = trainingRecord(tx.operation);
+  const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
+    ? await getBlockByNumber(tx.block_number, false).catch(() => null) : null;
+  const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash) : null;
 
   const details = [
     { label: 'Transaction Hash', value: tx.hash, mono: true, copy: true },
@@ -119,9 +124,22 @@ export default async function TransactionDetailPage({
     });
   }
 
+  if (lesson) {
+    details.push(
+      { label: 'Training Job', value: lesson.jobId },
+      { label: 'Dataset', value: lesson.datasetId ?? '-' },
+      { label: 'Training Status', value: lesson.status ?? '-' },
+      { label: 'Training Backend', value: lesson.backend ?? '-' },
+      { label: 'Record Path', value: lesson.path, link: `/database${lesson.path.split('/').map(encodeURIComponent).join('/')}` },
+      { label: 'Submitted At (reported)', value: lesson.submittedAt === null ? '-' : new Date(lesson.submittedAt).toISOString() },
+      { label: 'Training Record Latency', value: latency === null ? 'Unavailable' : `${latency.toLocaleString('en-US')} ms` },
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Transaction Details</h1>
+      {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the containing block timestamp. It excludes finality wait and requires synchronized clocks.</p>}
 
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
         <dl className="divide-y divide-gray-200">

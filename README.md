@@ -10,6 +10,8 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 - **Dashboard** — Live network stats: current block, peer count, consensus status, latest blocks and transactions
 - **Blocks** — Browse all blocks or filter to blocks with transactions, with pagination
 - **Transactions** — Search and inspect transactions by hash, address, or block number
+- **On-chain TPS** — Counts included transactions over consecutive block intervals, including empty blocks; separate from Layer 2 or inference throughput
+- **Training Records** — Decodes native lesson records in transaction details, with dataset, backend and submission-to-inclusion latency when the required timestamps exist
 - **Validators** — Active validators with stake amounts and proposal rights
 - **Accounts** — Balance, nonce, and transaction history per address
 - **Knowledge Graph** — Interactive visualization of the on-chain decentralized knowledge base: topics, explorations, relationships, and explorer stats
