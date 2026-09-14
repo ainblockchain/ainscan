@@ -137,6 +137,7 @@ export default async function TransactionDetailPage({
       { label: 'Knowledge SHA-256', value: lesson.patchSha256 ?? '-', mono: true, copy: lesson.patchSha256 !== null },
       { label: 'Training Status', value: lesson.status ?? '-' },
       { label: 'Training Backend', value: lesson.backend ?? '-' },
+      { label: 'Model ID (trainer-reported)', value: lesson.modelId ?? '-' },
       { label: 'Record Path', value: lesson.path, link: `/database${lesson.path.split('/').map(encodeURIComponent).join('/')}` },
       { label: 'Submitted At (reported)', value: lesson.submittedAt === null ? '-' : new Date(lesson.submittedAt).toISOString() },
       { label: 'Training Record Latency', value: latency === null ? 'Unavailable' : `${latency.toLocaleString('en-US')} ms` },
