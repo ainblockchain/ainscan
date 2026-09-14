@@ -4,8 +4,9 @@ import { getTransactionByHash, getBlockByNumber, getLastBlockNumber, getBlockLis
 import { formatTimestamp, getOperationType } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
 import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';
-import { transactionChannels } from '@/lib/state-channel';
+import { transactionChannels, transactionEscrows } from '@/lib/state-channel';
 import StateChannelDetails from '@/components/StateChannelDetails';
+import EscrowDetails from '@/components/EscrowDetails';
 
 /** Normalize a raw transaction object into a flat shape. */
 function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
@@ -94,6 +95,7 @@ export default async function TransactionDetailPage({
   const opType = getOperationType(tx);
   const lesson = trainingRecord(tx.operation);
   const channelIds = transactionChannels(tx.operation);
+  const escrows = transactionEscrows(tx.operation);
   const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
     ? await getBlockByNumber(tx.block_number, false).catch(() => null) : null;
   const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash) : null;
@@ -185,6 +187,8 @@ export default async function TransactionDetailPage({
 
       {channelIds.slice(0, 5).map(channelId => <StateChannelDetails key={channelId} channelId={channelId} />)}
       {channelIds.length > 5 && <p className="text-sm text-gray-500">Showing the first five channels. All channel paths remain available in the transaction operation.</p>}
+      {escrows.slice(0, 5).map(escrow => <EscrowDetails key={escrow.root} escrow={escrow} />)}
+      {escrows.length > 5 && <p className="text-sm text-gray-500">Showing the first five escrow contracts. All paths remain available in the transaction operation.</p>}
 
       {tx.exec_result && (
         <div className="space-y-2">

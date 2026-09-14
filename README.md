@@ -13,6 +13,7 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 - **On-chain TPS** — Counts included transactions over consecutive block intervals, including empty blocks; separate from Layer 2 or inference throughput
 - **Training Records** — Decodes native lesson records in transaction details, with dataset ID/hash, reported training rows, knowledge or draft ID/hash, backend and submission-to-inclusion latency when the required timestamps exist. These are sender-reported fields, not proof of model quality or inference success; rows are not a dataset count.
 - **State Channels** — Automatically shows the current on-chain state and proof hash for channel paths found in a transaction, including batched operations
+- **Escrow Contracts** — Recognizes native `/escrow` contract operations, escrow service-account balances and incoming/outgoing transfer paths used by the cooperative channel SDK. Transaction details link both participants and the contract database path and show current configuration/approval/release records. Closing sequences are not presented as verified off-chain TPS.
 - **Validators** — Active validators with stake amounts and proposal rights
 - **Accounts** — Balance, nonce, and transaction history per address
 - **Knowledge Graph** — Interactive visualization of the on-chain decentralized knowledge base: topics, explorations, relationships, and explorer stats
