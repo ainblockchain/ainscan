@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { truncateHash, truncateAddress, timeAgo, getOperationType } from '@/lib/utils';
+import NativeRecordSummary from './NativeRecordSummary';
 
 interface TxRow {
   hash: string;
@@ -7,6 +8,7 @@ interface TxRow {
   timestamp?: number;
   address?: string;
   operation?: any;
+  tx_body?: { operation?: unknown };
 }
 
 export default function TransactionsTable({
@@ -37,6 +39,9 @@ export default function TransactionsTable({
             </th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
               Type
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Native Records
             </th>
           </tr>
         </thead>
@@ -82,8 +87,11 @@ export default function TransactionsTable({
               </td>
               <td className="px-4 py-3 text-sm">
                 <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-                  {getOperationType(tx)}
+                  {tx.operation || tx.tx_body?.operation ? getOperationType({ operation: tx.operation ?? tx.tx_body?.operation }) : 'UNKNOWN'}
                 </span>
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <NativeRecordSummary operation={tx.operation ?? tx.tx_body?.operation} compact={compact} />
               </td>
             </tr>
           ))}

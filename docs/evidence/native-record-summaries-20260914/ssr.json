@@ -1,0 +1,7 @@
+{
+  "checks": 12,
+  "passed": true,
+  "scope": "SSR checks using retained real-chain synthetic training/inference records and adversarial fixtures; no new training or inference workload",
+  "trainingTransaction": "0x754a947eafdaeacc9492bf3903ebcf797f1bf9f3df10d18e1595e8ab0a834530",
+  "inferenceTransaction": "0xb966241731995759b58b0121dab4176f3fe02835ec6c34b385c088bd1bf4cb23"
+}
