@@ -6,7 +6,10 @@ chain state, or enter its ID, then select **Load Records**. A direct link can us
 the native lesson path; it is not a test label or Run ID.
 
 The existing Knowledge page queries `ain_get` with `is_shallow: true` at
-`/apps/knowledge/market/lessons` to discover publishers. The selected publisher's
+`/apps/knowledge/market/lessons` and `/apps/knowledge/market/inference_batches`
+to discover publishers, including nodes that have recorded inference but no
+training lessons. If one discovery query fails, results from the other remain
+available with an incomplete-discovery warning. The selected publisher's
 records come from `/apps/knowledge/market/lessons/<node-id>`. No Ainize web or node
 API, benchmark database, experiment API or private credential is used. The
 explorer must be configured for the same chain that receives the lesson writes.

@@ -1,20 +1,26 @@
 import Link from 'next/link';
 import { rpc, getValue } from '@/lib/rpc';
 import { LESSONS_ROOT, validPublisher, trainingOverview } from '@/lib/training-overview';
+import { INFERENCE_ROOT } from '@/lib/inference-overview';
 
 export default async function TrainingOverview({ publisher }: { publisher?: string }) {
   let publishers: string[] = [];
   let discoveryFailed = false;
   let publisherListLimited = false;
-  try {
-    const shallow = await rpc('ain_get', { type: 'GET_VALUE', ref: LESSONS_ROOT, is_shallow: true });
-    if (shallow !== null && (!shallow || typeof shallow !== 'object' || Array.isArray(shallow))) throw new Error('Invalid publisher state');
-    const keys = Object.keys(shallow ?? {}).filter(validPublisher).sort();
-    publisherListLimited = keys.length > 100;
-    publishers = keys.slice(0, 100);
-  } catch {
-    discoveryFailed = true;
+  const discovered = new Set<string>();
+  const responses = await Promise.allSettled([LESSONS_ROOT, INFERENCE_ROOT].map(ref => rpc('ain_get', { type: 'GET_VALUE', ref, is_shallow: true })));
+  for (const response of responses) {
+    try {
+      if (response.status === 'rejected') throw new Error('Publisher discovery failed');
+      const shallow = response.value;
+      if (shallow !== null && (!shallow || typeof shallow !== 'object' || Array.isArray(shallow))) throw new Error('Invalid publisher state');
+      for (const key of Object.keys(shallow ?? {}).filter(validPublisher)) discovered.add(key);
+    } catch {
+      discoveryFailed = true;
+    }
   }
+  publisherListLimited = discovered.size > 100;
+  publishers = Array.from(discovered).sort().slice(0, 100);
   let overview: ReturnType<typeof trainingOverview> | null = null;
   let stateFailed = false;
   const valid = publisher !== undefined && validPublisher(publisher);
@@ -37,7 +43,7 @@ export default async function TrainingOverview({ publisher }: { publisher?: stri
       <button type="submit" className="rounded bg-blue-600 px-4 py-2 text-sm text-white">Load Records</button>
       <Link href={`/database${database}`} className="text-sm text-blue-600 hover:underline">Browse Native State</Link>
     </form>
-    {discoveryFailed && <p role="alert" className="text-sm text-amber-700">Publisher discovery unavailable. Enter a known publisher ID to query its records.</p>}
+    {discoveryFailed && <p role="alert" className="text-sm text-amber-700">Publisher discovery is incomplete or unavailable. Enter a known publisher ID to query its records.</p>}
     {publisherListLimited && <p className="text-sm text-amber-700">Suggestions show the first 100 publishers. Other publisher IDs can be entered directly.</p>}
     {publisher !== undefined && !valid && <p role="alert" className="text-sm text-red-600">Invalid publisher ID.</p>}
     {stateFailed && <p role="alert" className="text-sm text-red-600">Training state unavailable. No counts are inferred from this failed query.</p>}

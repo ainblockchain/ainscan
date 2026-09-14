@@ -4,6 +4,7 @@ import { getGraphStats, getKnowledgeGraph } from '@/lib/knowledge';
 import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
 import KnowledgeGraphView from './KnowledgeGraphView';
 import TrainingOverview from '@/components/TrainingOverview';
+import InferenceOverview from '@/components/InferenceOverview';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,7 @@ export default async function KnowledgePage({ searchParams }: { searchParams?: {
       </div>
 
       <TrainingOverview publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
+      <InferenceOverview publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
