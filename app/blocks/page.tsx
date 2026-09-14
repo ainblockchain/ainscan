@@ -24,7 +24,7 @@ export default async function BlocksPage({
 
   if (filterTx) {
     // Show only blocks with transactions
-    const blocks = await getRecentBlocksWithTransactions(PAGE_SIZE * page);
+    const blocks = await getRecentBlocksWithTransactions(PAGE_SIZE * page + 1);
     const allSorted = blocks.sort((a: any, b: any) => b.number - a.number);
     const start = (page - 1) * PAGE_SIZE;
     sortedBlocks = allSorted.slice(start, start + PAGE_SIZE);
