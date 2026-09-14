@@ -12,6 +12,7 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 - **Transactions** — Search and inspect transactions by hash, address, or block number
 - **On-chain TPS** — Counts included transactions over consecutive block intervals, including empty blocks; separate from Layer 2 or inference throughput
 - **Training Records** — Decodes native lesson records in transaction details, with dataset, backend and submission-to-inclusion latency when the required timestamps exist
+- **State Channels** — Automatically shows the current on-chain state and proof hash for channel paths found in a transaction, including batched operations
 - **Validators** — Active validators with stake amounts and proposal rights
 - **Accounts** — Balance, nonce, and transaction history per address
 - **Knowledge Graph** — Interactive visualization of the on-chain decentralized knowledge base: topics, explorations, relationships, and explorer stats
