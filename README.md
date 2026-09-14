@@ -46,6 +46,16 @@ JSON-RPC node. It does not accept benchmark status uploads or require a run ID.
 Benchmark execution, sample selection and pass/fail assessment belong to external
 scripts, not to the blockchain explorer.
 
+Transaction details recognize native Ainize inference batch writes under
+`/apps/knowledge/market/inference_batches/<node-address>/<batch-id>`. Valid version-1
+records show the model, completed request count, observation interval, reported
+requests per second and receipt commitment. Malformed records remain visible as
+raw operations, without a derived rate. Counts, clocks and commitments are not
+independently verified, and transaction fields alone do not prove execution
+success. These rates never replace network onchain TPS or aggregate overlapping
+intervals. Automatic node receipt production and real-load reconciliation remain
+separate integration work; this display does not establish measured throughput.
+
 ## License
 
 MIT

@@ -7,6 +7,7 @@ import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';
 import { transactionChannels, transactionEscrows } from '@/lib/state-channel';
 import StateChannelDetails from '@/components/StateChannelDetails';
 import EscrowDetails from '@/components/EscrowDetails';
+import { inferenceRecord } from '@/lib/inference-record';
 
 /** Normalize a raw transaction object into a flat shape. */
 function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
@@ -94,6 +95,7 @@ export default async function TransactionDetailPage({
 
   const opType = getOperationType(tx);
   const lesson = trainingRecord(tx.operation);
+  const inference = inferenceRecord(tx.operation);
   const channelIds = transactionChannels(tx.operation);
   const escrows = transactionEscrows(tx.operation);
   const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
@@ -146,9 +148,22 @@ export default async function TransactionDetailPage({
     );
   }
 
+  if (inference) {
+    details.push(
+      { label: 'Inference Model (reported)', value: inference.modelId },
+      { label: 'Completed Requests (reported)', value: inference.requestCount.toLocaleString('en-US') },
+      { label: 'Interval Start (reported)', value: new Date(inference.startedAt).toISOString() },
+      { label: 'Interval End (reported)', value: new Date(inference.finishedAt).toISOString() },
+      { label: 'Inference Requests / Second (reported)', value: inference.requestsPerSecond.toLocaleString('en-US', { maximumFractionDigits: 3 }) },
+      { label: 'Receipt Commitment (unverified)', value: inference.receiptRoot, mono: true, copy: true },
+      { label: 'Inference Record Path', value: inference.path, link: `/database${inference.path}` },
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Transaction Details</h1>
+      {inference && <p className="text-sm text-gray-500">Inference throughput is reported by the sender, not onchain TPS. These transaction fields do not prove successful execution, receipt coverage, client delivery or model quality. The commitment and content-addressed path are not independently verified here. Rates from overlapping intervals must not be added.</p>}
       {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the containing block timestamp. It excludes finality wait and requires synchronized clocks.</p>}
       {lesson && <p className="text-sm text-gray-500">Dataset and knowledge fields are reported by the transaction sender. Inclusion does not verify training quality, public availability, or inference success. Training rows are not a count of datasets.</p>}
 
