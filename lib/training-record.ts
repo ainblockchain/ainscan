@@ -3,6 +3,10 @@ export interface TrainingRecord {
   jobId: string;
   nodeId: string;
   datasetId: string | null;
+  datasetSha256: string | null;
+  rows: number | null;
+  patchId: string | null;
+  patchSha256: string | null;
   status: string | null;
   backend: string | null;
   submittedAt: number | null;
@@ -18,6 +22,10 @@ export function trainingRecord(operation: unknown): TrainingRecord | null {
   return {
     path: input.ref, nodeId: match[1], jobId: match[2],
     datasetId: typeof value.dataset_id === 'string' ? value.dataset_id : null,
+    datasetSha256: typeof value.dataset_sha256 === 'string' && /^[a-f0-9]{64}$/i.test(value.dataset_sha256) ? value.dataset_sha256 : null,
+    rows: typeof value.rows === 'number' && Number.isSafeInteger(value.rows) && value.rows >= 0 ? value.rows : null,
+    patchId: typeof value.patch_id === 'string' ? value.patch_id : null,
+    patchSha256: typeof value.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(value.sha256) ? value.sha256 : null,
     status: typeof value.status === 'string' ? value.status : null,
     backend: typeof value.backend === 'string' ? value.backend : null,
     submittedAt: typeof value.submitted_at === 'number' && Number.isSafeInteger(value.submitted_at) && value.submitted_at > 0 ? value.submitted_at : null,

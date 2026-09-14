@@ -131,6 +131,10 @@ export default async function TransactionDetailPage({
     details.push(
       { label: 'Training Job', value: lesson.jobId },
       { label: 'Dataset', value: lesson.datasetId ?? '-' },
+      { label: 'Dataset SHA-256', value: lesson.datasetSha256 ?? '-', mono: true, copy: lesson.datasetSha256 !== null },
+      { label: 'Training Rows (reported)', value: lesson.rows === null ? '-' : lesson.rows.toLocaleString('en-US') },
+      { label: 'Knowledge / Draft ID', value: lesson.patchId ?? '-' },
+      { label: 'Knowledge SHA-256', value: lesson.patchSha256 ?? '-', mono: true, copy: lesson.patchSha256 !== null },
       { label: 'Training Status', value: lesson.status ?? '-' },
       { label: 'Training Backend', value: lesson.backend ?? '-' },
       { label: 'Record Path', value: lesson.path, link: `/database${lesson.path.split('/').map(encodeURIComponent).join('/')}` },
@@ -143,6 +147,7 @@ export default async function TransactionDetailPage({
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Transaction Details</h1>
       {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the containing block timestamp. It excludes finality wait and requires synchronized clocks.</p>}
+      {lesson && <p className="text-sm text-gray-500">Dataset and knowledge fields are reported by the transaction sender. Inclusion does not verify training quality, public availability, or inference success. Training rows are not a count of datasets.</p>}
 
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
         <dl className="divide-y divide-gray-200">
