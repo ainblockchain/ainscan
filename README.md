@@ -32,24 +32,15 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 git clone https://github.com/ainblockchain/ainscan.git
 cd ainscan
 npm install
-    npm run dev
-
-## Live experiment monitoring
-
-The home page polls `/api/experiment/status` for a P2P experiment and also polls
-the configured AIN JSON-RPC node for the latest block and transaction hashes.
-P2P nodes may publish a status snapshot with a bearer token:
-
-```bash
-curl -X POST "$AINSCAN_URL/api/experiment/status" \
-  -H "Authorization: Bearer $AINSCAN_EXPERIMENT_STATUS_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"runId":"m2-p2p-20260913","nodeId":"peer-01","phase":"running","targetTPS":7000,"currentTPS":10421,"averageTPS":10250,"peakTPS":11818,"measured":631265,"errors":0,"block":{"number":482,"hash":"0x...","transactionCount":20,"transactionHashes":["0x..."]}}'
+npm run dev
 ```
 
-Set `AINSCAN_EXPERIMENT_STATUS_TOKEN` in the AINscan deployment environment.
-The POST route is write-authenticated; the GET route is read-only for the UI.
-```
+## Explorer data
+
+AINscan reads blocks, transactions and network state from the configured AIN
+JSON-RPC node. It does not accept benchmark status uploads or require a run ID.
+Benchmark execution, sample selection and pass/fail assessment belong to external
+scripts, not to the blockchain explorer.
 
 ## License
 

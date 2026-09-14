@@ -44,7 +44,7 @@ export async function rpc(method: string, params: Record<string, any> = {}): Pro
     if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
       throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
     }
-    return wrapper?.result ?? wrapper;
+    return wrapper && typeof wrapper === 'object' && 'result' in wrapper ? wrapper.result : wrapper;
   }
 }
 
