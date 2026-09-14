@@ -9,6 +9,7 @@ import StateChannelDetails from '@/components/StateChannelDetails';
 import EscrowDetails from '@/components/EscrowDetails';
 import { inferenceRecord } from '@/lib/inference-record';
 import NestedNativeRecords from '@/components/NestedNativeRecords';
+import { transactionExecution } from '@/lib/transaction-execution';
 
 /** Normalize a raw transaction object into a flat shape. */
 function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
@@ -24,6 +25,8 @@ function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
     parent_tx_hash: raw.parent_tx_hash ?? txBody.parent_tx_hash,
     exec_result: raw.exec_result,
     receipt: raw.receipt,
+    is_executed: raw.is_executed,
+    is_finalized: raw.is_finalized,
   };
 }
 
@@ -76,6 +79,8 @@ export default async function TransactionDetailPage({
         const unwrapped = normalizeTx(raw.transaction, raw.number, raw.timestamp);
         unwrapped.exec_result = unwrapped.exec_result || raw.exec_result;
         unwrapped.receipt = unwrapped.receipt || raw.receipt;
+        unwrapped.is_executed = raw.is_executed ?? unwrapped.is_executed;
+        unwrapped.is_finalized = raw.is_finalized ?? unwrapped.is_finalized;
         return unwrapped;
       }
       return normalizeTx(raw);
@@ -95,6 +100,7 @@ export default async function TransactionDetailPage({
   if (!tx) notFound();
 
   const opType = getOperationType(tx);
+  const execution = transactionExecution(tx);
   const lesson = trainingRecord(tx.operation);
   const inference = inferenceRecord(tx.operation);
   const channelIds = transactionChannels(tx.operation);
@@ -120,6 +126,8 @@ export default async function TransactionDetailPage({
     },
     { label: 'Nonce', value: tx.nonce ?? '-' },
     { label: 'Operation Type', value: opType },
+    { label: 'Execution Status (RPC)', value: execution.status },
+    { label: 'Finalization (RPC)', value: execution.finalization },
   ];
 
   if (tx.parent_tx_hash) {
@@ -164,6 +172,9 @@ export default async function TransactionDetailPage({
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Transaction Details</h1>
+      {execution.status !== 'Succeeded' && <p className="text-sm text-amber-700">{execution.status.startsWith('Failed')
+        ? 'This transaction failed. Its operation describes requested writes, not successfully stored records.'
+        : 'Successful execution is not confirmed by the available RPC receipt. Block inclusion alone does not confirm that the requested writes succeeded.'}</p>}
       {inference && <p className="text-sm text-gray-500">Inference throughput is reported by the sender, not onchain TPS. These transaction fields do not prove successful execution, receipt coverage, client delivery or model quality. The commitment and content-addressed path are not independently verified here. Rates from overlapping intervals must not be added.</p>}
       {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the containing block timestamp. It excludes finality wait and requires synchronized clocks.</p>}
       {lesson && <p className="text-sm text-gray-500">Dataset and knowledge fields are reported by the transaction sender. Inclusion does not verify training quality, public availability, or inference success. Training rows are not a count of datasets.</p>}
@@ -214,6 +225,16 @@ export default async function TransactionDetailPage({
           <div className="rounded-lg border border-gray-200 bg-white overflow-hidden p-4">
             <pre className="text-sm text-gray-800 overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(tx.exec_result, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+      {tx.receipt && (
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-900">Execution Receipt</h2>
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden p-4">
+            <pre className="text-sm text-gray-800 overflow-x-auto whitespace-pre-wrap">
+              {JSON.stringify(tx.receipt, null, 2)}
             </pre>
           </div>
         </div>
