@@ -1,6 +1,22 @@
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://devnet-api.ainetwork.ai/json-rpc';
 const REST_BASE = RPC_URL.replace(/\/json-rpc$/, '');
 
+/**
+ * Read the chain through this app's own server instead of straight from the browser.
+ *
+ * A node only answers a browser when it was started with a CORS whitelist that includes the
+ * explorer's origin. Public endpoints are, private and test chains usually are not, and asking an
+ * operator to restart consensus nodes just to look at them is the wrong trade. With
+ * NEXT_PUBLIC_RPC_PROXY=1 every read goes to /api/rpc and /api/rest here, which are same-origin,
+ * so the node needs no CORS at all. Default is off, so public deployments keep talking to the
+ * chain directly and no request passes through this server.
+ */
+const USE_PROXY = process.env.NEXT_PUBLIC_RPC_PROXY === '1' || process.env.NEXT_PUBLIC_RPC_PROXY === 'true';
+const inBrowser = () => typeof window !== 'undefined';
+const rpcEndpoint = () => (USE_PROXY && inBrowser() ? '/api/rpc' : RPC_URL);
+const restUrl = (path: string) =>
+  USE_PROXY && inBrowser() ? `/api/rest${path.startsWith('/') ? path : `/${path}`}` : `${REST_BASE}${path}`;
+
 let requestId = 0;
 
 const MAX_RETRIES = 3;
@@ -11,15 +27,15 @@ async function sleep(ms: number) {
 
 export async function rpc(method: string, params: Record<string, any> = {}): Promise<any> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(RPC_URL, {
+    const endpoint = rpcEndpoint();
+    // /api/rpc takes { method, params } and fills in jsonrpc/id/protoVer itself.
+    const payload = endpoint === '/api/rpc'
+      ? { method, params }
+      : { jsonrpc: '2.0', id: ++requestId, method, params: { protoVer: '1.0.0', ...params } };
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: ++requestId,
-        method,
-        params: { protoVer: '1.0.0', ...params },
-      }),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     });
     const text = await res.text();
@@ -152,7 +168,7 @@ export async function matchOwner(ref: string): Promise<any> {
 // REST API helpers
 async function rest(path: string): Promise<any> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(`${REST_BASE}${path}`, { cache: 'no-store' });
+    const res = await fetch(restUrl(path), { cache: 'no-store' });
     if (res.status === 429 && attempt < MAX_RETRIES) {
       await sleep(1000 * (attempt + 1));
       continue;
