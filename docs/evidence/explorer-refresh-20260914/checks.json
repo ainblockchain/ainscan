@@ -1,0 +1,17 @@
+{
+  "scope": "Component validation, not public deployment or workload performance evidence",
+  "controlledHookAndWiringChecks": 15,
+  "browser": "Chrome 145.0.7632.116",
+  "browserChecks": [
+    "initially enabled",
+    "manual refresh",
+    "automatic refresh after 15 seconds",
+    "checkbox pauses refresh for 16 seconds",
+    "manual refresh while paused"
+  ],
+  "browserRouter": "stubbed Next router with actual React DOM and timers",
+  "finalRefreshCalls": 3,
+  "passed": true,
+  "typecheck": "passed",
+  "targetedLint": "passed without warnings"
+}

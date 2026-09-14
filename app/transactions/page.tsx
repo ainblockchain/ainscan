@@ -1,5 +1,6 @@
 import { getRecentTransactions } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
+import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export default async function TransactionsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Recent Transactions</h1>
+      <ExplorerRefresh />
       <p className="text-sm text-gray-500">
         Showing {transactions.length} most recent transactions.
       </p>

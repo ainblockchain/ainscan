@@ -5,6 +5,7 @@ import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
 import KnowledgeGraphView from './KnowledgeGraphView';
 import TrainingOverview from '@/components/TrainingOverview';
 import InferenceOverview from '@/components/InferenceOverview';
+import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,7 @@ export default async function KnowledgePage({ searchParams }: { searchParams?: {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Knowledge Graph</h1>
+        <ExplorerRefresh />
         <p className="mt-1 text-sm text-gray-500">
           Explore the on-chain knowledge graph — topics, explorations, and their relationships
         </p>

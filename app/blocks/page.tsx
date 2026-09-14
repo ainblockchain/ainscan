@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getLastBlockNumber, getBlockHeadersList, getRecentBlocksWithTransactions } from '@/lib/rpc';
 import BlocksTable from '@/components/BlocksTable';
 import Pagination from '@/components/Pagination';
+import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,7 @@ export default async function BlocksPage({
 
   return (
     <div className="space-y-4">
+      <ExplorerRefresh key={page} autoRefresh={page === 1} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Blocks</h1>
         <div className="flex gap-2">

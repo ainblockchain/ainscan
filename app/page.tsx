@@ -5,6 +5,7 @@ import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
 import { genesisHash } from '@/lib/chain-snapshot';
+import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,7 @@ export default async function HomePage() {
         </div>
       </div>
 
+      <ExplorerRefresh />
       <NetworkStats
         genesisHash={genesisHash(genesis)}
         blockNumber={blockNumber}
