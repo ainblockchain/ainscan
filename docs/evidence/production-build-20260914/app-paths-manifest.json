@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/accounts/[address]/page": "app/accounts/[address]/page.js",
+  "/api/rpc/route": "app/api/rpc/route.js",
+  "/api/knowledge/route": "app/api/knowledge/route.js",
+  "/api/x402/route": "app/api/x402/route.js",
+  "/blocks/[number]/page": "app/blocks/[number]/page.js",
+  "/database/[[...path]]/page": "app/database/[[...path]]/page.js",
+  "/nodes/[address]/page": "app/nodes/[address]/page.js",
+  "/search/page": "app/search/page.js",
+  "/transactions/[hash]/page": "app/transactions/[hash]/page.js",
+  "/blocks/page": "app/blocks/page.js",
+  "/knowledge/[...topic]/page": "app/knowledge/[...topic]/page.js",
+  "/knowledge/exploration/[id]/page": "app/knowledge/exploration/[id]/page.js",
+  "/knowledge/page": "app/knowledge/page.js",
+  "/nodes/page": "app/nodes/page.js",
+  "/page": "app/page.js",
+  "/transactions/page": "app/transactions/page.js"
+}

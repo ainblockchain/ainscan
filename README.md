@@ -15,6 +15,9 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 - **Execution Receipts** — Transaction Details shows RPC-reported execution and finalization separately, plus the raw receipt. Success requires explicit execution and a numeric zero receipt code. Missing receipts, including block-scan fallbacks, remain unknown rather than successful. Failed transactions retain their requested operations for inspection; inclusion latency does not establish that a write succeeded.
 - **Publisher Training State** — Knowledge → Training Records reads native lesson state for a selected publisher, with job links, reported status, dataset IDs, model IDs and row counts. This is part of the existing knowledge explorer, not an experiment dashboard. See [training state browsing](docs/training-state-browsing.md) for count scope and limitations.
 - **Publisher Inference State** — The same Knowledge publisher selection shows native inference batches, distinct reported model IDs, interval timestamps and per-batch request rates. Rates are never summed across overlapping intervals or presented as blockchain TPS. See [inference state browsing](docs/inference-state-browsing.md).
+
+See [resource-limited production build verification](docs/production-build-verification.md)
+for the reproducible Docker build command and the observed build's remaining warnings.
 - **State Channels** — Automatically shows the current on-chain state and proof hash for channel paths found in a transaction, including batched operations
 - **Escrow Contracts** — Recognizes native `/escrow` contract operations, escrow service-account balances and incoming/outgoing transfer paths used by the cooperative channel SDK. Transaction details link both participants and the contract database path and show current configuration/approval/release records. Closing sequences are not presented as verified off-chain TPS.
 - **Validators** — Active validators with stake amounts and proposal rights
