@@ -44,3 +44,12 @@ Validation used TypeScript checking and in-memory server rendering with 70
 synthetic dataset-backed lessons, scoped dataset/model deduplication, malformed
 entries, oversized input, invalid publisher paths and RPC errors. This is not
 evidence that 70 real jobs ran concurrently or that the public site was deployed.
+
+An additional real isolated-chain check used the actual ain-js-backed
+`AinLedger.noteLesson` adapter. Three synthetic lessons were finalized in blocks
+13, 16 and 19 on 2026-09-14; this parser decoded the returned native state as three
+lessons, two dataset IDs, two model IDs and two `TRAINING` labels, with no skipped
+records. Reproduction and full native responses are retained in the core repo's
+[training-state guide](https://github.com/ainblockchain/ainize-core/blob/main/docs/training-state-reproduction.md).
+This verifies real chain wire-format compatibility, not training concurrency,
+model quality or the public site's deployment.
