@@ -1,17 +1,8 @@
+import { transactionOperations } from './transaction-operations';
+
 export function transactionPaths(operation: unknown): string[] {
-  const paths = new Set<string>();
-  const pending: unknown[] = [operation];
-  let visited = 0;
-  while (pending.length && visited < 1000) {
-    const candidate = pending.pop();
-    visited++;
-    if (!candidate || typeof candidate !== 'object') continue;
-    const input = candidate as Record<string, unknown>;
-    if (input.type === 'SET' && Array.isArray(input.op_list)) pending.push(...input.op_list.slice(0, 1000 - visited));
-    if (typeof input.ref !== 'string') continue;
-    paths.add(input.ref);
-  }
-  return Array.from(paths);
+  return Array.from(new Set(transactionOperations(operation).entries
+    .map(entry => entry.operation.ref).filter((ref): ref is string => typeof ref === 'string')));
 }
 
 export function transactionChannels(operation: unknown): string[] {

@@ -56,6 +56,21 @@ success. These rates never replace network onchain TPS or aggregate overlapping
 intervals. Automatic node receipt production and real-load reconciliation remain
 separate integration work; this display does not establish measured throughput.
 
+Native training and inference records inside `SET.op_list` batches are also
+shown in transaction details, in operation order. Each expandable item identifies
+its exact operation position and database path, including repeated writes to the
+same path. Training items expose dataset/model/knowledge fields and the reported
+submission-to-block latency; inference items expose their reported observation
+interval and request count. These are transaction writes, not a count of
+simultaneously running jobs or independently verified datasets/models.
+
+The shared operation traversal used by native records, state channels and escrow
+references examines at most 1,000 items and 32 nesting levels. A visible warning
+identifies a truncated inspection; at most 100 recognized nested native records
+are expanded into detail panels, with the full raw operation still available.
+Invalid out-of-range training timestamps display as unavailable rather than
+breaking the transaction page. Existing top-level record details are unchanged.
+
 ## License
 
 MIT

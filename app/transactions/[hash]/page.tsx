@@ -8,6 +8,7 @@ import { transactionChannels, transactionEscrows } from '@/lib/state-channel';
 import StateChannelDetails from '@/components/StateChannelDetails';
 import EscrowDetails from '@/components/EscrowDetails';
 import { inferenceRecord } from '@/lib/inference-record';
+import NestedNativeRecords from '@/components/NestedNativeRecords';
 
 /** Normalize a raw transaction object into a flat shape. */
 function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
@@ -188,6 +189,8 @@ export default async function TransactionDetailPage({
           ))}
         </dl>
       </div>
+
+      <NestedNativeRecords operation={tx.operation} block={inclusionBlock} txHash={tx.hash} />
 
       {tx.operation && (
         <div className="space-y-2">

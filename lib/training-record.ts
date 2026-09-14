@@ -30,7 +30,7 @@ export function trainingRecord(operation: unknown): TrainingRecord | null {
     status: typeof value.status === 'string' ? value.status : null,
     backend: typeof value.backend === 'string' ? value.backend : null,
     modelId: typeof value.model_id === 'string' && value.model_id.trim() && value.model_id.length <= 512 ? value.model_id : null,
-    submittedAt: typeof value.submitted_at === 'number' && Number.isSafeInteger(value.submitted_at) && value.submitted_at > 0 ? value.submitted_at : null,
+    submittedAt: typeof value.submitted_at === 'number' && Number.isSafeInteger(value.submitted_at) && value.submitted_at > 0 && value.submitted_at <= 8640000000000000 ? value.submitted_at : null,
   };
 }
 
