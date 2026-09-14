@@ -1,5 +1,4 @@
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://devnet-api.ainetwork.ai/json-rpc';
-const REST_BASE = RPC_URL.replace(/\/json-rpc$/, '');
+import { rpcEndpoint } from './rpc-config';
 
 let requestId = 0;
 
@@ -11,16 +10,18 @@ async function sleep(ms: number) {
 
 export async function rpc(method: string, params: Record<string, any> = {}): Promise<any> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(RPC_URL, {
+    const browser = typeof window !== 'undefined';
+    const res = await fetch(browser ? '/api/rpc' : rpcEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(browser ? { method, params } : {
         jsonrpc: '2.0',
         id: ++requestId,
         method,
         params: { protoVer: '1.0.0', ...params },
       }),
       cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
     });
     const text = await res.text();
     // Retry on rate limit or non-JSON responses
@@ -151,8 +152,9 @@ export async function matchOwner(ref: string): Promise<any> {
 
 // REST API helpers
 async function rest(path: string): Promise<any> {
+  if (typeof window !== 'undefined') throw new Error('REST index is server-only; use the RPC fallback');
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(`${REST_BASE}${path}`, { cache: 'no-store' });
+    const res = await fetch(`${rpcEndpoint().replace(/\/json-rpc\/?$/, '')}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
     if (res.status === 429 && attempt < MAX_RETRIES) {
       await sleep(1000 * (attempt + 1));
       continue;

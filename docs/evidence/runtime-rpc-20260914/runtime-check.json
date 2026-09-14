@@ -1,0 +1,10 @@
+{
+  "scope": "Built Next server using runtime AIN_RPC_URL; existing chain read-only",
+  "genesis": "0xbfd4655d165df2e7fd93521e550734e5d53f6157cbb0d7c657775e1ab4ec3e25",
+  "proxyStatus": 200,
+  "unsupportedMethodStatus": 400,
+  "knowledgeStatus": 200,
+  "trainingPanel": true,
+  "inferencePanel": true,
+  "experimentsLink": false
+}
