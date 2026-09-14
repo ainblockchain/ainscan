@@ -1,18 +1,20 @@
 import Link from 'next/link';
-import { getLastBlockNumber, getPeerCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions } from '@/lib/rpc';
+import { getLastBlockNumber, getPeerCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions, getBlockByNumber } from '@/lib/rpc';
 import SearchBar from '@/components/SearchBar';
 import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
+import { genesisHash } from '@/lib/chain-snapshot';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   // Fetch sequentially to avoid rate limiting on devnet
-  const blockNumber = await getLastBlockNumber().catch(() => 0);
-  const [peerCount, consensusStatus] = await Promise.all([
+  const blockNumber = await getLastBlockNumber().catch(() => null);
+  const [peerCount, consensusStatus, genesis] = await Promise.all([
     getPeerCount().catch(() => null),
     getConsensusStatus().catch(() => null),
+    getBlockByNumber(0, true).catch(() => null),
   ]);
   const recentBlocks = await getRecentBlocksWithTransactions(10).catch(() => []);
   const recentTxs = await getRecentTransactions(10).catch(() => []);
@@ -31,6 +33,7 @@ export default async function HomePage() {
       </div>
 
       <NetworkStats
+        genesisHash={genesisHash(genesis)}
         blockNumber={blockNumber}
         peerCount={peerCount}
         consensusState={consensusState}

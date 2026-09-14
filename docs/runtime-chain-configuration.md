@@ -1,5 +1,28 @@
 # One runtime chain for server and browser
 
+## Genesis identity on Home
+
+The home statistics display a Genesis Block hash linked to `/blocks/0`. Each TPS
+observation reads genesis before and after its consecutive block window; missing
+identity or a changed hash prevents a TPS value. If a later sample identifies a
+different genesis from the server-rendered page, the statistics are hidden and a
+reload warning appears, avoiding a new-chain TPS beside old-chain block tables.
+Failed initial height queries are unavailable, not height zero. Peer/consensus
+props remain page-load observations, not independent live liveness measurements.
+Genesis equality alone cannot distinguish forks sharing genesis or replace
+consensus verification.
+
+Genesis polling explicitly requests full transactions to avoid the destructive
+hash-only projection in older nodes. Verification
+found an old-node bug where hash-only genesis reads altered cached transactions
+and eventually returned HTTP 500. The blockchain fix and read-only reproduction
+are in `ain-blockchain/docs/rpc-block-read-safety.md` on the
+`year3/m1-sharding-protocol` branch. Deploy that fix to protect other hash-only
+RPC consumers as well. This explorer change does not restart
+nodes or repair their already-mutated caches.
+
+## Runtime endpoint
+
 Set `AIN_RPC_URL` on the running AINSCAN server to select its blockchain endpoint:
 
 ```sh
@@ -38,7 +61,7 @@ Compare block zero from the expected chain with the same read through AINSCAN:
 ```sh
 curl -sS http://localhost:3000/api/rpc \
   -H 'Content-Type: application/json' \
-  --data '{"method":"ain_getBlockByNumber","params":{"number":0}}'
+  --data '{"method":"ain_getBlockByNumber","params":{"number":0,"getFullTransactions":true}}'
 ```
 
 Check the returned genesis hash against the agreed chain, then inspect the same
