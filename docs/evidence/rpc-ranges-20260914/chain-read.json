@@ -1,0 +1,59 @@
+{
+  "scope": "Read-only actual isolated-chain RPC fallback, no benchmark or public deployment claim",
+  "image": "sha256:eddd95425bbec1c97bfb6f06371ce22a9a146fee936c90f54f17fe04dd1aa955",
+  "resources": {
+    "cpus": 2,
+    "memoryBytes": 4294967296,
+    "network": "internal"
+  },
+  "headHeight": 2,
+  "exclusiveHeadRange": [
+    2
+  ],
+  "recentBlock": 0,
+  "included": true,
+  "calls": [
+    {
+      "method": "ain_getLastBlockNumber",
+      "params": {
+        "protoVer": "1.0.0"
+      }
+    },
+    {
+      "method": "ain_getBlockList",
+      "params": {
+        "protoVer": "1.0.0",
+        "from": 0,
+        "to": 3
+      }
+    },
+    {
+      "method": "ain_getLastBlockNumber",
+      "params": {
+        "protoVer": "1.0.0"
+      }
+    },
+    {
+      "method": "ain_getBlockList",
+      "params": {
+        "protoVer": "1.0.0",
+        "from": 0,
+        "to": 3
+      }
+    },
+    {
+      "method": "ain_getBlockByNumber",
+      "params": {
+        "protoVer": "1.0.0",
+        "number": 0,
+        "getFullTransactions": true
+      }
+    }
+  ],
+  "transaction": {
+    "hash": "0x22d4b4148eb8dbe49ae50f97071f643503dfa81b82e2f01d53ec891a00d34a83",
+    "block_number": 0,
+    "address": "0xAAAf6f50A0304F12119D218b94bea8082642515B"
+  },
+  "omitted": "Genesis operation body omitted; original full output retained in local results directory"
+}

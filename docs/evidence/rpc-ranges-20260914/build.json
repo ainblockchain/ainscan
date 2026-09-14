@@ -1,0 +1,25 @@
+{
+  "scope": "Production Next.js build, not public deployment",
+  "result": {
+    "exitCode": 0
+  },
+  "docker": {
+    "image": "sha256:52e634617c0fad0207eeba4262ecdf142fc886649253ac42e4730ce75bd04dd5",
+    "cpuNano": 2000000000,
+    "memoryBytes": 4294967296,
+    "memorySwapBytes": 4294967296,
+    "pidsLimit": 256,
+    "network": "bridge"
+  },
+  "baseCommit": "c90141266cf7e8405b2afa93c40fc3af7f944b85",
+  "buildId": "inXPN07gJbYc53WIiDxo7",
+  "sourceSha256": {
+    "lib/rpc.ts": "a8eb1729b8b3d4f1cd896a2c9bc9b4a80957d353bb007e91bcc3ea80ae591dc3",
+    "app/blocks/page.tsx": "b48b1cba028516ffe23bc3ef104f49eb66ab4f1d2a07cb3bbb4d0b0eaa1605e0",
+    "app/transactions/[hash]/page.tsx": "cf96fa36d3fcc6be6725e29f17c7242290e9ff8d964186ec7fc7c2649ee8678f"
+  },
+  "warnings": [
+    "Existing KnowledgeGraph.tsx:310 missing findNodeAt dependency",
+    "Outdated Browserslist data"
+  ]
+}

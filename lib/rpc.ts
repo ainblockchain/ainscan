@@ -182,8 +182,8 @@ export async function getRecentBlocksWithTransactions(count: number = 10): Promi
 
 /** Scan blocks backwards to find blocks with transactions (fallback). */
 async function scanRecentBlocksWithTransactions(count: number): Promise<any[]> {
-  const lastBlock = await getLastBlockNumber().catch(() => 0);
-  if (!lastBlock) return [];
+  const lastBlock = await getLastBlockNumber();
+  if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
   const found: any[] = [];
   for (let end = lastBlock; end >= 0 && found.length < count; ) {
@@ -191,13 +191,13 @@ async function scanRecentBlocksWithTransactions(count: number): Promise<any[]> {
     for (let i = 0; i < 2 && end >= 0; i++) {
       const batchEnd = end;
       const batchStart = Math.max(0, end - 19);
-      batchPromises.push(getBlockList(batchStart, batchEnd).catch(() => []));
+      batchPromises.push(getBlockList(batchStart, batchEnd + 1));
       end = batchStart - 1;
     }
     const batches = await Promise.all(batchPromises);
     for (const blocks of batches) {
-      if (!Array.isArray(blocks)) continue;
-      for (const b of blocks) {
+      if (!Array.isArray(blocks)) throw new Error('Invalid block list');
+      for (const b of [...blocks].sort((left, right) => right.number - left.number)) {
         if (b.transactions?.length > 0 && found.length < count) {
           found.push(b);
         }
@@ -228,8 +228,8 @@ export async function getRecentTransactions(count: number = 50): Promise<any[]> 
 
 /** Scan blocks backwards to find transactions (fallback when REST index is empty). */
 export async function scanRecentTransactions(count: number = 50): Promise<any[]> {
-  const lastBlock = await getLastBlockNumber().catch(() => 0);
-  if (!lastBlock) return [];
+  const lastBlock = await getLastBlockNumber();
+  if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
   const transactions: any[] = [];
   for (let end = lastBlock; end >= 0 && transactions.length < count; ) {
@@ -239,7 +239,7 @@ export async function scanRecentTransactions(count: number = 50): Promise<any[]>
       const batchEnd = end;
       const batchStart = Math.max(0, end - 19);
       batchPromises.push(
-        getBlockList(batchStart, batchEnd).catch(() => [])
+        getBlockList(batchStart, batchEnd + 1)
       );
       end = batchStart - 1;
     }
@@ -247,7 +247,7 @@ export async function scanRecentTransactions(count: number = 50): Promise<any[]>
 
     const blocksWithTx: number[] = [];
     for (const blocks of batches) {
-      if (!Array.isArray(blocks)) continue;
+      if (!Array.isArray(blocks)) throw new Error('Invalid block list');
       for (const b of blocks) {
         if (b.transactions?.length > 0) blocksWithTx.push(b.number);
       }
@@ -256,11 +256,11 @@ export async function scanRecentTransactions(count: number = 50): Promise<any[]>
 
     const fullBlocks = await Promise.all(
       blocksWithTx.slice(0, count - transactions.length)
-        .map((n) => getBlockByNumber(n, true).catch(() => null))
+        .map((n) => getBlockByNumber(n, true))
     );
 
     for (const block of fullBlocks) {
-      if (!block?.transactions) continue;
+      if (!Array.isArray(block?.transactions)) throw new Error('Full block unavailable');
       for (const tx of block.transactions) {
         if (typeof tx === 'object') {
           transactions.push({

@@ -32,8 +32,10 @@ function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
 
 /** Try to find a transaction by hash in a specific block. */
 async function findTxInBlock(blockNumber: number, hash: string) {
-  const block = await getBlockByNumber(blockNumber, true).catch(() => null);
-  if (!block?.transactions) return null;
+  if (!Number.isSafeInteger(blockNumber) || blockNumber < 0) return null;
+  const block = await getBlockByNumber(blockNumber, true);
+  if (block === null) return null;
+  if (!Array.isArray(block?.transactions)) throw new Error('Full block unavailable');
   for (const tx of block.transactions) {
     if (typeof tx === 'object' && tx.hash === hash) {
       return normalizeTx(tx, block.number, block.timestamp);
@@ -44,13 +46,13 @@ async function findTxInBlock(blockNumber: number, hash: string) {
 
 /** Scan recent blocks to find a transaction by hash. */
 async function scanForTx(hash: string) {
-  const lastBlock = await getLastBlockNumber().catch(() => 0);
-  if (!lastBlock) return null;
+  const lastBlock = await getLastBlockNumber();
+  if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
   for (let end = lastBlock; end >= 0; ) {
     const start = Math.max(0, end - 19);
-    const blocks = await getBlockList(start, end).catch(() => []);
-    if (!Array.isArray(blocks)) break;
+    const blocks = await getBlockList(start, end + 1);
+    if (!Array.isArray(blocks)) throw new Error('Invalid block list');
     for (const b of blocks) {
       if (b.transactions?.length > 0) {
         const found = await findTxInBlock(b.number, hash);
@@ -106,7 +108,7 @@ export default async function TransactionDetailPage({
   const channelIds = transactionChannels(tx.operation);
   const escrows = transactionEscrows(tx.operation);
   const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
-    ? await getBlockByNumber(tx.block_number, false).catch(() => null) : null;
+    ? await getBlockByNumber(tx.block_number, tx.block_number === 0).catch(() => null) : null;
   const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash) : null;
 
   const details = [

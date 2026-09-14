@@ -14,7 +14,8 @@ export default async function BlocksPage({
 }) {
   const filterTx = searchParams.filter === 'tx';
   const page = Math.max(1, parseInt(searchParams.page || '1', 10));
-  const lastBlock = await getLastBlockNumber().catch(() => 0);
+  const lastBlock = await getLastBlockNumber();
+  if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
   let sortedBlocks: any[] = [];
   let hasNext = false;
@@ -32,7 +33,7 @@ export default async function BlocksPage({
     const to = lastBlock - (page - 1) * PAGE_SIZE;
     const from = Math.max(0, to - PAGE_SIZE + 1);
     const blocks = to >= 0
-      ? await getBlockHeadersList(from, to).catch(() => [])
+      ? await getBlockHeadersList(from, to + 1)
       : [];
     sortedBlocks = Array.isArray(blocks)
       ? [...blocks].sort((a: any, b: any) => b.number - a.number)
