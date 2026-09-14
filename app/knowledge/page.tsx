@@ -3,6 +3,7 @@ import { getValue } from '@/lib/rpc';
 import { getGraphStats, getKnowledgeGraph } from '@/lib/knowledge';
 import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
 import KnowledgeGraphView from './KnowledgeGraphView';
+import TrainingOverview from '@/components/TrainingOverview';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,7 @@ function flattenTopics(
   return results;
 }
 
-export default async function KnowledgePage() {
+export default async function KnowledgePage({ searchParams }: { searchParams?: { publisher?: string | string[] } }) {
   const [topics, stats, graphData] = await Promise.all([getTopics(), getStats(), getGraph()]);
   const topicList = flattenTopics(topics);
 
@@ -61,6 +62,8 @@ export default async function KnowledgePage() {
           Explore the on-chain knowledge graph — topics, explorations, and their relationships
         </p>
       </div>
+
+      <TrainingOverview publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
