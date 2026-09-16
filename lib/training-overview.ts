@@ -25,6 +25,11 @@ export function trainingOverview(publisher: string, value: unknown) {
     records.push(lesson);
   }
   return { records, skipped, truncated: entries.length > 1000,
+    backends: {
+      gradient: records.filter(record => record.backend === 'gradient').length,
+      stub: records.filter(record => record.backend === 'stub').length,
+      otherOrUnknown: records.filter(record => record.backend !== 'gradient' && record.backend !== 'stub').length,
+    },
     datasets: new Set(records.map(record => record.datasetId)).size,
     models: new Set(records.flatMap(record => record.modelId ? [record.modelId] : [])).size,
     training: records.filter(record => record.status === 'TRAINING').length };

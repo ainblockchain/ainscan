@@ -57,13 +57,16 @@ export default async function TrainingOverview({ publisher }: { publisher?: stri
           <dt className="text-sm text-gray-500">{label}</dt><dd className="text-2xl font-bold text-gray-900">{count.toLocaleString('en-US')}</dd>
         </div>)}
       </dl>
+      <p className="text-sm text-gray-500">Backend labels (reported): {overview.backends.gradient.toLocaleString('en-US')} gradient, {overview.backends.stub.toLocaleString('en-US')} stub (simulated), {overview.backends.otherOrUnknown.toLocaleString('en-US')} other or unknown. These labels do not verify GPU execution or model quality.</p>
       {(overview.truncated || overview.skipped > 0) && <p className="text-sm text-amber-700">Partial summary: at most 1,000 entries are inspected; {overview.skipped} malformed or shallow entries were skipped. Counts are not network totals.</p>}
       {overview.records.length === 0 ? <p className="text-sm text-gray-500">No recognized dataset-backed lessons in this response.</p> : <div className="overflow-x-auto rounded border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50"><tr>{['Job / Native State', 'Status', 'Dataset ID', 'Model ID', 'Rows (reported)'].map(label => <th key={label} className="px-4 py-3 text-left font-medium text-gray-500">{label}</th>)}</tr></thead>
+          <thead className="bg-gray-50"><tr>{['Job / Native State', 'Status', 'Backend (reported)', 'Dataset ID', 'Model ID', 'Rows (reported)'].map(label => <th key={label} className="px-4 py-3 text-left font-medium text-gray-500">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-gray-200">{overview.records.slice(0, 100).map(record => <tr key={record.path}>
             <td className="px-4 py-3"><Link href={`/database${record.path}`} className="text-blue-600 break-all hover:underline">{record.jobId}</Link></td>
-            <td className="px-4 py-3">{record.status}</td><td className="px-4 py-3 break-all">{record.datasetId}</td>
+            <td className="px-4 py-3">{record.status}</td>
+            <td className="px-4 py-3 break-all">{record.backend === 'stub' ? 'stub (simulated)' : record.backend === 'gradient' ? 'gradient (reported)' : record.backend?.trim() ? `Other: ${record.backend.slice(0, 120)}` : 'Unknown'}</td>
+            <td className="px-4 py-3 break-all">{record.datasetId}</td>
             <td className="px-4 py-3 break-all">{record.modelId ?? '-'}</td><td className="px-4 py-3">{record.rows ?? '-'}</td>
           </tr>)}</tbody>
         </table>
