@@ -109,7 +109,13 @@ export default async function TransactionDetailPage({
   const escrows = transactionEscrows(tx.operation);
   const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
     ? await getBlockByNumber(tx.block_number, tx.block_number === 0).catch(() => null) : null;
-  const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash) : null;
+  // The block after this one says when this one stopped accepting transactions. That, not the
+  // containing block's own timestamp, is when the record was on the chain.
+  const nextBlock = lesson && Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
+    ? await getBlockByNumber(tx.block_number + 1, false).catch(() => null) : null;
+  const sealedAt = nextBlock && typeof (nextBlock as { timestamp?: unknown }).timestamp === 'number'
+    ? (nextBlock as { timestamp: number }).timestamp : null;
+  const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash, sealedAt) : null;
 
   const details = [
     { label: 'Transaction Hash', value: tx.hash, mono: true, copy: true },
@@ -178,7 +184,7 @@ export default async function TransactionDetailPage({
         ? 'This transaction failed. Its operation describes requested writes, not successfully stored records.'
         : 'Successful execution is not confirmed by the available RPC receipt. Block inclusion alone does not confirm that the requested writes succeeded.'}</p>}
       {inference && <p className="text-sm text-gray-500">Inference throughput is reported by the sender, not onchain TPS. These transaction fields do not prove successful execution, receipt coverage, client delivery or model quality. The commitment and content-addressed path are not independently verified here. Rates from overlapping intervals must not be added.</p>}
-      {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the containing block timestamp. It excludes finality wait and requires synchronized clocks.</p>}
+      {lesson && <p className="text-sm text-gray-500">Training record latency measures the reporter-provided submission time to the moment the containing block was sealed, read as the next block&apos;s timestamp. A block&apos;s own timestamp is when its proposer began building it, so a record submitted into that same block carries a later time than the block does. It excludes finality wait and requires synchronized clocks.</p>}
       {lesson && <p className="text-sm text-gray-500">Dataset and knowledge fields are reported by the transaction sender. Inclusion does not verify training quality, public availability, or inference success. Training rows are not a count of datasets.</p>}
 
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -203,7 +209,7 @@ export default async function TransactionDetailPage({
         </dl>
       </div>
 
-      <NestedNativeRecords operation={tx.operation} block={inclusionBlock} txHash={tx.hash} />
+      <NestedNativeRecords operation={tx.operation} block={inclusionBlock} txHash={tx.hash} sealedAt={sealedAt} />
 
       {tx.operation && (
         <div className="space-y-2">

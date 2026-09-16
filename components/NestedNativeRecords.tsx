@@ -4,14 +4,14 @@ import { transactionOperations } from '@/lib/transaction-operations';
 import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';
 import { inferenceRecord } from '@/lib/inference-record';
 
-export default function NestedNativeRecords({ operation, block, txHash }: { operation: unknown; block: unknown; txHash: string }) {
+export default function NestedNativeRecords({ operation, block, txHash, sealedAt }: { operation: unknown; block: unknown; txHash: string; sealedAt?: number | null }) {
   const tree = transactionOperations(operation);
   const records = tree.entries.filter(entry => entry.position !== 'operation').flatMap(entry => {
     const lesson = trainingRecord(entry.operation);
     const inference = inferenceRecord(entry.operation);
     if (!lesson && !inference) return [];
     const path = (lesson ?? inference)!.path;
-    const latency = lesson ? trainingRecordLatency(lesson, block, txHash) : null;
+    const latency = lesson ? trainingRecordLatency(lesson, block, txHash, sealedAt) : null;
     const fields: [string, string][] = lesson ? [
       ['Training Job', lesson.jobId], ['Training Status', lesson.status ?? '-'],
       ['Dataset', lesson.datasetId ?? '-'], ['Dataset SHA-256', lesson.datasetSha256 ?? '-'],
@@ -35,7 +35,7 @@ export default function NestedNativeRecords({ operation, block, txHash }: { oper
   if (!records.length && !tree.truncated) return null;
   return <section className="space-y-3">
     <h2 className="text-xl font-semibold text-gray-900">Batched Native Records</h2>
-    <p className="text-sm text-gray-500">Each item is a reported write within this transaction, not an independently verified job or proof of simultaneous training. Latency uses the reported submission time and the containing block timestamp. Inference rates are not onchain TPS and must not be added across overlapping intervals. Inclusion alone does not establish execution success, model quality or receipt coverage.</p>
+    <p className="text-sm text-gray-500">Each item is a reported write within this transaction, not an independently verified job or proof of simultaneous training. Latency uses the reported submission time and the moment the containing block was sealed, read as the next block&apos;s timestamp — a block&apos;s own timestamp is when its proposer began building it, so records submitted into that same block carry a later time than it does. Inference rates are not onchain TPS and must not be added across overlapping intervals. Inclusion alone does not establish execution success, model quality or receipt coverage.</p>
     {tree.truncated && <p className="text-sm text-amber-700">Operation inspection reached its 1,000-item or 32-level safety limit. The list may be incomplete; inspect the raw operation below.</p>}
     {records.length > 100 && <p className="text-sm text-amber-700">Showing the first 100 recognized records. The remaining records are available in the raw operation below.</p>}
     {records.slice(0, 100).map(record => <details key={record.position} className="rounded-lg border border-gray-200 bg-white" open={records.length === 1}>

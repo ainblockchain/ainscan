@@ -34,12 +34,30 @@ export function trainingRecord(operation: unknown): TrainingRecord | null {
   };
 }
 
-export function trainingRecordLatency(record: TrainingRecord, block: unknown, txHash: string): number | null {
+/**
+ * How long the record took to reach the chain: from the submission time it carries to the moment the
+ * block holding it was SEALED.
+ *
+ * A block's own `timestamp` is when its proposer started building it, and transactions keep arriving
+ * into that block for the next second or two — so a record's `submittedAt` is routinely LATER than the
+ * timestamp of the very block that carries it. Subtracting the two gave a negative number and this
+ * function returned `Unavailable` for it, which is how a real 1.8-second latency read as "no data" on
+ * a chain where 48 of 70 records were in exactly that position.
+ *
+ * `sealedAt` is the next block's timestamp — when this block stopped accepting and the next began.
+ * Without it there is no arrival time to report, and the answer is null rather than a guess.
+ */
+export function trainingRecordLatency(
+  record: TrainingRecord, block: unknown, txHash: string, sealedAt?: number | null,
+): number | null {
   if (record.submittedAt === null || !block || typeof block !== 'object') return null;
   const value = block as Record<string, unknown>;
   if (typeof value.timestamp !== 'number' || !Number.isSafeInteger(value.timestamp)
-    || value.timestamp < record.submittedAt || !Array.isArray(value.transactions)) return null;
+    || !Array.isArray(value.transactions)) return null;
   const included = value.transactions.some(transaction => typeof transaction === 'string' ? transaction === txHash
     : transaction && typeof transaction === 'object' && transaction.hash === txHash);
-  return included ? value.timestamp - record.submittedAt : null;
+  if (!included) return null;
+  if (typeof sealedAt !== 'number' || !Number.isSafeInteger(sealedAt)) return null;
+  const latency = sealedAt - record.submittedAt;
+  return latency >= 0 ? latency : null;
 }
