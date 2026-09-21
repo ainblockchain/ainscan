@@ -276,3 +276,11 @@ export async function scanRecentTransactions(count: number = 50): Promise<any[]>
   }
   return transactions.slice(0, count);
 }
+
+// Tracker membership is network-wide; net_peerCount is only one node's neighbours.
+export async function getNodeCount(): Promise<number> {
+  const status = await rest('/network_status');
+  const count = status?.numNodesAlive;
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error('Network node count unavailable');
+  return count;
+}

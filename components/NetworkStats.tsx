@@ -11,13 +11,13 @@ import { chainSnapshot } from '@/lib/chain-snapshot';
 interface NetworkStatsProps {
   blockNumber: number | null;
   genesisHash: string | null;
-  peerCount: number | null;
+  nodeCount: number | null;
   consensusState: string | null;
 }
 
 export default function NetworkStats({
   blockNumber,
-  peerCount,
+  nodeCount,
   consensusState,
   genesisHash,
 }: NetworkStatsProps) {
@@ -47,9 +47,9 @@ export default function NetworkStats({
   const stats = [
     { label: 'Block Height', value: height === null ? '-' : formatNumber(height) },
     {
-      label: 'Direct Peer Count',
-      description: 'Peers connected directly to the queried node, not the total number of nodes in the network.',
-      value: !changed && peerCount != null ? (peerCount === 0 ? 'Disconnected' : formatNumber(peerCount)) : '-',
+      label: 'Node Count',
+      description: 'Online blockchain nodes reported by the network tracker.',
+      value: !changed && nodeCount != null ? formatNumber(nodeCount) : '-',
     },
     { label: 'Consensus', value: !changed ? consensusState || '-' : '-' },
     { label: 'On-chain TPS', value: !error && throughput ? (throughput.tps === 0 ? 'No activity' : throughput.tps.toLocaleString('en-US', { maximumFractionDigits: 2 })) : '-',

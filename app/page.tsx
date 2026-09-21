@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getLastBlockNumber, getPeerCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions, getBlockByNumber } from '@/lib/rpc';
+import { getLastBlockNumber, getNodeCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions, getBlockByNumber } from '@/lib/rpc';
 import SearchBar from '@/components/SearchBar';
 import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
@@ -12,8 +12,8 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   // Fetch sequentially to avoid rate limiting on devnet
   const blockNumber = await getLastBlockNumber().catch(() => null);
-  const [peerCount, consensusStatus, genesis] = await Promise.all([
-    getPeerCount().catch(() => null),
+  const [nodeCount, consensusStatus, genesis] = await Promise.all([
+    getNodeCount().catch(() => null),
     getConsensusStatus().catch(() => null),
     getBlockByNumber(0, true).catch(() => null),
   ]);
@@ -37,7 +37,7 @@ export default async function HomePage() {
       <NetworkStats
         genesisHash={genesisHash(genesis)}
         blockNumber={blockNumber}
-        peerCount={peerCount}
+        nodeCount={nodeCount}
         consensusState={consensusState}
       />
 
