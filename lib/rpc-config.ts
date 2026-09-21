@@ -1,5 +1,5 @@
 export function rpcEndpoint(): string {
-  return process.env.AIN_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'https://devnet-api.ainetwork.ai/json-rpc';
+  return process.env.AIN_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'http://3.89.93.84:8088/json-rpc';
 }
 
 export const EXPLORER_RPC_METHODS = new Set([

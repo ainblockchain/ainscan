@@ -91,3 +91,16 @@ is included rather than presenting the earlier Git HEAD as the entire build inpu
 Full local output is `/mnt/newdata/gov/kpi/results/ainscan-runtime-rpc-build-20260914`.
 This confirms runtime endpoint routing and compiled page availability, not live
 browser automation, populated data on that chain, public deployment or KPI success.
+
+## KPI AWS network (2026-09-21)
+
+The production deployment selects `http://3.89.93.84:8088/json-rpc` in
+`vercel.json`. This is a read-only gateway on the first KPI EC2 validator,
+not its write-capable RPC port. It allows only the explorer read-method list
+and the two recent-history REST endpoints. Transaction submissions and
+other methods are rejected. Validator port 8080 remains restricted.
+
+The ten instances belong to run `ain-p2p-20260921225407` in `us-east-1b`.
+Changing the AWS deployment requires updating this endpoint and redeploying;
+EC2 public IPs can change after stop/start. Do not silently fall back to devnet
+when the test chain is unavailable.

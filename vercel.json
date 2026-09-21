@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "env": {
+    "AIN_RPC_URL": "http://3.89.93.84:8088/json-rpc"
+  }
+}
