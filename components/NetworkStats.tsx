@@ -48,6 +48,7 @@ export default function NetworkStats({
     { label: 'Block Height', value: height === null ? '-' : formatNumber(height) },
     {
       label: 'Direct Peer Count',
+      description: 'Peers connected directly to the queried node, not the total number of nodes in the network.',
       value: !changed && peerCount != null ? (peerCount === 0 ? 'Disconnected' : formatNumber(peerCount)) : '-',
     },
     { label: 'Consensus', value: !changed ? consensusState || '-' : '-' },
