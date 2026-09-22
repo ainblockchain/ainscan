@@ -1,4 +1,5 @@
 export interface BenchmarkStatus {
+  source?: string;
   version: number; kind: 'l2_peer' | 'l1'; runId: string; genesisHash: string;
   phase: 'starting' | 'running' | 'verifying' | 'completed' | 'failed';
   updatedAt: string; completedAt: string | null; startedAt?: string;

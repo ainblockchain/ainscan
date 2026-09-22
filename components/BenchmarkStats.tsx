@@ -28,7 +28,7 @@ export default function BenchmarkStats() {
         <div className="flex flex-wrap justify-between gap-2"><h2 className="text-lg font-semibold text-gray-900">{label}</h2>
           <span className={`text-xs rounded-full px-2 py-1 ${completed && !unavailable ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{status}</span></div>
         <div className="text-3xl font-semibold text-gray-900">{unavailable ? '—' : number(kind === 'l1' ? value?.peakTPS : value?.averageTPS)} <span className="text-sm font-normal">TPS</span></div>
-        <p className="text-xs text-gray-500">{kind === 'l1' ? 'Observed maximum per block interval' : completed ? 'Final average' : 'Average so far'} · {kind === 'l2_peer' ? 'Signed peer transfers acknowledged after durable persistence' : 'Successful transactions included in independently verified finalized blocks'}</p>
+        <p className="text-xs text-gray-500">{kind === 'l1' ? 'Observed maximum per block interval' : completed ? 'Final average' : 'Average so far'} · {kind === 'l2_peer' ? 'Signed peer transfers acknowledged after durable persistence' : value?.source === 'l2_checkpoints' ? 'L2 state checkpoints included in independently verified finalized L1 blocks' : 'Successful transactions included in independently verified finalized blocks'}</p>
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>Current<br/><strong>{!unavailable && value?.phase === 'running' ? number(value.currentTPS) : '—'}</strong></div>
           <div>{kind === 'l2_peer' ? 'Peak / 1 s' : 'Average'}<br/><strong>{unavailable ? '—' : number(kind === 'l1' ? value?.averageTPS : value?.peakTPS)}</strong></div>

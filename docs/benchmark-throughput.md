@@ -23,3 +23,8 @@ from the current browser session and could not establish a daily network peak.
 It also took the maximum of rolling averages, which is a different metric from
 the experiment's peak per block interval. No historical experiment result is
 substituted into the live chain counter.
+
+M2 now submits changed co-signed L2 states as L1 checkpoints during the load.
+Both feeds use the same run ID; L1 `source=l2_checkpoints` identifies finalized
+checkpoint throughput, separate from historical synthetic L1 experiments.
+The live network card includes those real transactions in its rolling window.
