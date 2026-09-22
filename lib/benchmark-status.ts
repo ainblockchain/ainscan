@@ -4,7 +4,7 @@ export interface BenchmarkStatus {
   updatedAt: string; completedAt: string | null; startedAt?: string;
   averageTPS: number | null; peakTPS: number | null; currentTPS: number | null;
   measured: number; elapsedMs: number; failures: number; samples: number[];
-  finalized: boolean; checkpointTx: string | null; performancePass?: boolean;
+  finalized: boolean; checkpointTx: string | null; checkpointBlock: number | null; performancePass?: boolean;
 }
 export function validBenchmark(value: unknown, kind: string, genesis: string): value is BenchmarkStatus {
   if (!value || typeof value !== 'object') return false;
@@ -16,6 +16,7 @@ export function validBenchmark(value: unknown, kind: string, genesis: string): v
     || ![v.averageTPS,v.peakTPS,v.currentTPS].every(n => n === null || nonnegative(n))
     || !Array.isArray(v.samples) || v.samples.length > 3600 || !v.samples.every(nonnegative)) return false;
   if (v.phase === 'completed' && (!v.finalized || !/^0x[a-fA-F0-9]{64}$/.test(v.checkpointTx || '')
+    || !Number.isSafeInteger(v.checkpointBlock) || v.checkpointBlock! < 0
     || !v.completedAt || !Number.isFinite(Date.parse(v.completedAt)))) return false;
   return v.averageTPS === null || (v.elapsedMs > 0 && Math.abs(v.averageTPS - v.measured * 1000 / v.elapsedMs) < 0.01);
 }

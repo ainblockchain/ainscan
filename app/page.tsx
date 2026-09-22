@@ -35,14 +35,13 @@ export default async function HomePage() {
       </div>
 
       <ExplorerRefresh />
+      <BenchmarkStats />
       <NetworkStats
         genesisHash={genesisHash(genesis)}
         blockNumber={blockNumber}
         nodeCount={nodeCount}
         consensusState={consensusState}
       />
-
-      <BenchmarkStats />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">

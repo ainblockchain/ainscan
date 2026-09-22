@@ -15,7 +15,7 @@ test('rejects inflated rates and invalid samples',()=>{
 });
 test('requires finalized evidence for completed runs',()=>{
  assert.ok(!validBenchmark({...value,phase:'completed'},'l2_peer',genesis));
- const final={...value,phase:'completed',finalized:true,completedAt:new Date().toISOString(),checkpointTx:'0x'+'b'.repeat(64)};
+ const final={...value,phase:'completed',finalized:true,completedAt:new Date().toISOString(),checkpointTx:'0x'+'b'.repeat(64),checkpointBlock:100};
  assert.ok(validBenchmark(final,'l2_peer',genesis));
  assert.ok(!benchmarkIsStale(final,Date.now()+100000));
 });
