@@ -42,7 +42,7 @@ export default function NetworkStats({
     <section aria-label="Current network activity" className="space-y-3">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Current network activity</h2>
-        <p className="text-sm text-gray-500">L1 activity across the latest 10 block intervals. This rolling average falls when traffic stops; completed experiment results above remain unchanged.</p>
+        <p className="text-sm text-gray-500">L1 activity across the latest 10 block intervals. This rolling average falls when traffic stops; completed run results above remain unchanged.</p>
       </div>
       <div className="text-sm text-gray-500 break-all">Genesis Block: {visibleGenesis
         ? <Link href="/blocks/0" className="font-mono text-blue-600 hover:underline">{visibleGenesis}</Link>
