@@ -1,0 +1,11 @@
+# L1 and L2 benchmark throughput
+
+The home page retains the existing on-chain TPS window and adds separate **L1 load test TPS** and **L2 peer TPS** cards. Each shows its average, observed peak, measurement count and duration, phase, run ID, and completion/update timestamp. Completed runs remain visible after traffic stops. The L2 chart uses one-second bins; the L1 chart uses finalized block intervals.
+
+`/api/benchmarks` reads finalized state under `/apps/ai_network_dag/benchmarks/{l1,l2_peer}/latest` on the configured chain. Each record contains `version:1`, its kind, run ID, genesis hash, timestamps, phase, elapsed milliseconds, measured transfers, average/peak/current rates, failures, `samplesJson`, and final checkpoint hash. Arrays are JSON-encoded strings because AIN's state object format does not accept arrays. The API checks chain identity and arithmetic, and verifies that completed runs reference a finalized checkpoint transaction at the matching run's expected path. It returns no cached success on an upstream error. Live updates older than 30 seconds are marked interrupted.
+
+L2 numbers count signed peer transfers verified by the sender after receiver persistence. They are not added to on-chain TPS. A low on-chain TPS during an L2-only load is expected: only setup, opening, monitor updates, and the final checkpoint are on-chain.
+
+The companion runners are `kpi_test/m2/run-m2-layer2-tps-benchmark.sh` and `kpi_test/m2/run-m2-l1-max-tps-benchmark.sh`. The L1 runner increases transaction submission rates across ten AWS nodes, independently matches block hashes, and counts successful finalized transactions. Its maximum is an observed per-block-interval peak, not a claimed theoretical limit. Submission rejects and pending transactions are retained in the experiment evidence.
+
+Checks: `scripts/verify-benchmark-status.sh`, `npm run build`, and local `/api/benchmarks` against the AWS chain. The historical L2 run `m2_optimized_20260921T235045Z` provides 489,778 measured transfers / 60 seconds = 8,162.97 TPS, with a finalized checkpoint.

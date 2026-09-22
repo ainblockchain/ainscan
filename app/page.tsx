@@ -5,6 +5,7 @@ import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
 import { genesisHash } from '@/lib/chain-snapshot';
+import BenchmarkStats from '@/components/BenchmarkStats';
 import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,8 @@ export default async function HomePage() {
         nodeCount={nodeCount}
         consensusState={consensusState}
       />
+
+      <BenchmarkStats />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
