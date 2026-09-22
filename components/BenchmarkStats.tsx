@@ -16,21 +16,22 @@ export default function BenchmarkStats() {
       const stale = value ? benchmarkIsStale(value) : false;
       const unavailable = Boolean(error) || stale;
       const completed = value?.phase === 'completed';
-      const label = kind === 'l2_peer' ? 'L2 peer TPS' : 'L1 load test TPS';
+      const label = kind === 'l2_peer' ? 'L2 peer TPS' : 'L1 max TPS';
       const status = error ? 'Feed unavailable' : !value ? 'No recorded run' : stale ? 'Updates interrupted' :
         ({starting: 'Preparing', running: 'Live', verifying: 'Verifying receipts', completed: 'Completed · checkpoint finalized', failed: 'Run failed'})[value.phase];
       return <div key={kind} className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
         <div className="flex flex-wrap justify-between gap-2"><h2 className="text-lg font-semibold text-gray-900">{label}</h2>
           <span className={`text-xs rounded-full px-2 py-1 ${completed && !unavailable ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{status}</span></div>
-        <div className="text-3xl font-semibold text-gray-900">{unavailable ? '—' : number(value?.averageTPS)} <span className="text-sm font-normal">TPS</span></div>
-        <p className="text-xs text-gray-500">{completed ? 'Final average' : 'Average so far'} · {kind === 'l2_peer' ? 'Signed peer transfers acknowledged after durable persistence' : 'Successful transactions included in independently verified finalized blocks'}</p>
+        <div className="text-3xl font-semibold text-gray-900">{unavailable ? '—' : number(kind === 'l1' ? value?.peakTPS : value?.averageTPS)} <span className="text-sm font-normal">TPS</span></div>
+        <p className="text-xs text-gray-500">{kind === 'l1' ? 'Observed maximum per block interval' : completed ? 'Final average' : 'Average so far'} · {kind === 'l2_peer' ? 'Signed peer transfers acknowledged after durable persistence' : 'Successful transactions included in independently verified finalized blocks'}</p>
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>Current<br/><strong>{!unavailable && value?.phase === 'running' ? number(value.currentTPS) : '—'}</strong></div>
-          <div>{kind === 'l2_peer' ? 'Peak / 1 s' : 'Peak / block interval'}<br/><strong>{unavailable ? '—' : number(value?.peakTPS)}</strong></div>
+          <div>{kind === 'l2_peer' ? 'Peak / 1 s' : 'Average'}<br/><strong>{unavailable ? '—' : number(kind === 'l1' ? value?.averageTPS : value?.peakTPS)}</strong></div>
           <div>Counted transfers<br/><strong>{unavailable ? '—' : number(value?.measured)}</strong></div>
         </div>
         {value && <>
-          <p className="text-xs text-gray-500">Window: {number(value.elapsedMs / 1000)} s · Failures: {number(value.failures)}</p>
+          <p className="text-xs text-gray-500">Window: {number(value.elapsedMs / 1000)} s · {kind === 'l1' ? 'Commit failures' : 'Failures'}: {number(value.failures)}</p>
+          {kind === 'l1' && value.rejected !== undefined && <p className="text-xs text-gray-500">Rejected submissions: {number(value.rejected)} · Pending: {number(value.pending)} · Unknown outcomes: {number(value.unknown)}</p>}
           {value.samples.length > 0 && <div className="h-36"><ResponsiveContainer width="100%" height="100%"><AreaChart data={value.samples.map((tps, i) => ({sample: i+1, tps}))}>
             <XAxis dataKey="sample" tick={{fontSize: 10}}/><YAxis width={52} tick={{fontSize: 10}}/><Tooltip formatter={(v: number) => [`${number(v)} TPS`, label]}/>
             <Area dataKey="tps" stroke={kind === 'l2_peer' ? '#7c3aed' : '#2563eb'} fill={kind === 'l2_peer' ? '#ede9fe' : '#dbeafe'} isAnimationActive={false}/>

@@ -4,7 +4,7 @@ export interface BenchmarkStatus {
   updatedAt: string; completedAt: string | null; startedAt?: string;
   averageTPS: number | null; peakTPS: number | null; currentTPS: number | null;
   measured: number; elapsedMs: number; failures: number; samples: number[];
-  finalized: boolean; checkpointTx: string | null; checkpointBlock: number | null; performancePass?: boolean;
+  finalized: boolean; checkpointTx: string | null; checkpointBlock: number | null; performancePass?: boolean; rejected?: number; pending?: number; unknown?: number;
 }
 export function validBenchmark(value: unknown, kind: string, genesis: string): value is BenchmarkStatus {
   if (!value || typeof value !== 'object') return false;
