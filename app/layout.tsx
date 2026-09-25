@@ -2,9 +2,13 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import NetworkProvider from '@/components/NetworkProvider';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
+
+// Every page reads the selected network from the request URL.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'AINscan - AI Network Blockchain Explorer',
@@ -19,11 +23,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 min-h-screen flex flex-col`}>
-        <Header />
-        <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
-          {children}
-        </main>
-        <Footer />
+        <NetworkProvider>
+          <Header />
+          <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
+            {children}
+          </main>
+          <Footer />
+        </NetworkProvider>
       </body>
     </html>
   );

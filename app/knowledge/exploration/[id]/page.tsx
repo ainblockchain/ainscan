@@ -2,11 +2,13 @@ import { getValue } from '@/lib/rpc';
 import { getExplorationNeighbors } from '@/lib/knowledge';
 import { KnowledgeExploration, GraphData } from '@/lib/types';
 import ExplorationDetail from './ExplorationDetail';
+import { parseNetwork, type Network } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { id: string };
+  searchParams: { network?: string | string[] };
 }
 
 function parseNodeId(nodeId: string): { address: string; topicKey: string; entryId: string } | null {
@@ -19,12 +21,13 @@ function parseNodeId(nodeId: string): { address: string; topicKey: string; entry
   return { address, topicKey, entryId };
 }
 
-async function getExploration(nodeId: string): Promise<{ data: KnowledgeExploration | null; address: string; topicKey: string; entryId: string }> {
+async function getExploration(network: Network, nodeId: string): Promise<{ data: KnowledgeExploration | null; address: string; topicKey: string; entryId: string }> {
   const parsed = parseNodeId(nodeId);
   if (!parsed) return { data: null, address: '', topicKey: '', entryId: '' };
 
   try {
     const data = await getValue(
+      network,
       `/apps/knowledge/explorations/${parsed.address}/${parsed.topicKey}/${parsed.entryId}`
     );
     return { data, ...parsed };
@@ -33,19 +36,20 @@ async function getExploration(nodeId: string): Promise<{ data: KnowledgeExplorat
   }
 }
 
-async function getNeighborhood(nodeId: string): Promise<GraphData> {
+async function getNeighborhood(network: Network, nodeId: string): Promise<GraphData> {
   try {
-    return await getExplorationNeighbors(nodeId);
+    return await getExplorationNeighbors(network, nodeId);
   } catch {
     return { nodes: [], edges: [] };
   }
 }
 
-export default async function ExplorationPage({ params }: PageProps) {
+export default async function ExplorationPage({ params, searchParams }: PageProps) {
+  const network = parseNetwork(searchParams.network);
   const nodeId = decodeURIComponent(params.id);
   const [exploration, graphData] = await Promise.all([
-    getExploration(nodeId),
-    getNeighborhood(nodeId),
+    getExploration(network, nodeId),
+    getNeighborhood(network, nodeId),
   ]);
 
   return (

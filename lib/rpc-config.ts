@@ -1,5 +1,15 @@
-export function rpcEndpoint(): string {
-  return process.env.AIN_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || 'http://3.89.93.84:8088/json-rpc';
+import { NETWORKS, type Network } from './network';
+
+// Optional per-network server-side overrides (e.g. a private gateway). There is
+// deliberately no single-endpoint override: it would serve one chain under both
+// network labels.
+const RPC_URL_OVERRIDES: Record<Network, string | undefined> = {
+  mainnet: process.env.AIN_MAINNET_RPC_URL,
+  testnet: process.env.AIN_TESTNET_RPC_URL,
+};
+
+export function rpcEndpoint(network: Network): string {
+  return RPC_URL_OVERRIDES[network] || NETWORKS[network].rpcUrl;
 }
 
 export const EXPLORER_RPC_METHODS = new Set([

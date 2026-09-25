@@ -2,19 +2,23 @@ import { notFound } from 'next/navigation';
 import { getBalance, getNonce, getValidatorInfo } from '@/lib/rpc';
 import { formatAIN } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
+import { parseNetwork } from '@/lib/network';
 
 export default async function AccountDetailPage({
   params,
+  searchParams,
 }: {
   params: { address: string };
+  searchParams: { network?: string | string[] };
 }) {
+  const network = parseNetwork(searchParams.network);
   const { address } = params;
   if (!address || !address.startsWith('0x')) notFound();
 
   const [balance, nonce, validatorInfo] = await Promise.all([
-    getBalance(address).catch(() => 0),
-    getNonce(address).catch(() => 0),
-    getValidatorInfo(address).catch(() => null),
+    getBalance(network, address).catch(() => 0),
+    getNonce(network, address).catch(() => 0),
+    getValidatorInfo(network, address).catch(() => null),
   ]);
 
   const isValidator = validatorInfo != null && typeof validatorInfo === 'object';

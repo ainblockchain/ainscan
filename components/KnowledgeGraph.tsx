@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { GraphData } from '@/lib/types';
+import { withNetwork } from '@/lib/network';
+import { useNetwork } from './NetworkProvider';
 
 const NODE_COLORS: Record<string, string> = {
   Topic: '#3B82F6',       // blue
@@ -53,6 +55,7 @@ interface Props {
 
 export default function KnowledgeGraph({ data, height = '500px', onNodeClick }: Props) {
   const router = useRouter();
+  const network = useNetwork();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const nodesRef = useRef<SimNode[]>([]);
@@ -300,14 +303,14 @@ export default function KnowledgeGraph({ data, height = '500px', onNodeClick }: 
 
     if (node.label === 'Topic') {
       const topicPath = node.properties.topic_path || node.id.replace(/^topic:/, '');
-      router.push(`/knowledge/${encodeURIComponent(topicPath)}`);
+      router.push(withNetwork(`/knowledge/${encodeURIComponent(topicPath)}`, network));
     } else if (node.label === 'Exploration') {
-      router.push(`/knowledge/exploration/${encodeURIComponent(node.id)}`);
+      router.push(withNetwork(`/knowledge/exploration/${encodeURIComponent(node.id)}`, network));
     } else if (node.label === 'User') {
       const address = node.properties.address || node.id.replace(/^user:/, '');
-      router.push(`/accounts/${address}`);
+      router.push(withNetwork(`/accounts/${address}`, network));
     }
-  }, [onNodeClick, router]);
+  }, [onNodeClick, router, network]);
 
   if (!data || data.nodes.length === 0) {
     return (

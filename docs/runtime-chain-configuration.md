@@ -21,28 +21,43 @@ are in `ain-blockchain/docs/rpc-block-read-safety.md` on the
 RPC consumers as well. This explorer change does not restart
 nodes or repair their already-mutated caches.
 
-## Runtime endpoint
+## Network selection
 
-Set `AIN_RPC_URL` on the running AINSCAN server to select its blockchain endpoint:
+AINSCAN serves two networks, chosen per request by the `network` query parameter:
+
+| `?network=` | JSON-RPC | Events | Chain ID |
+|---|---|---|---|
+| `mainnet` (default) | `https://mainnet-api.ainetwork.ai/json-rpc` | `wss://mainnet-event.ainetwork.ai` | 1 |
+| `testnet` | `https://testnet-api.ainetwork.ai/json-rpc` | `wss://testnet-event.ainetwork.ai` | 0 |
+
+The header selector switches networks. Internal links, search and pagination keep
+the parameter, so a testnet URL is shareable as-is. The last explicit choice is
+remembered in `localStorage` and in the `ainscan_network` cookie; a page load
+without `?network=` is redirected by `middleware.ts` to the remembered network, so
+server rendering never uses a different network than the URL shows. Unknown values
+fall back to mainnet. Browser SWR keys and the database browser include the
+network, so cached results from one network are never shown under the other.
+
+Server-rendered pages, `/api/rpc`, `/api/benchmarks` and `/api/knowledge` all take
+the network from the request. Endpoints can be overridden per network on the
+server with `AIN_MAINNET_RPC_URL` and `AIN_TESTNET_RPC_URL`:
 
 ```sh
-AIN_RPC_URL=http://your-chain-node:8081/json-rpc npm run start
+AIN_TESTNET_RPC_URL=http://your-testnet-node:8081/json-rpc npm run start
 ```
 
-Both server-rendered pages and the existing `/api/rpc` proxy use this runtime
-setting. Browser SWR updates, including block/TPS polling, call same-origin
-`/api/rpc` instead of contacting a build-time upstream URL directly. The database
-browser already uses that proxy. No browser CORS access to the chain node is
-required. The URL must be reachable from the AINSCAN server/container; its
-`localhost` is not the user's workstation or a separate blockchain container.
+The former single-endpoint `AIN_RPC_URL` / `NEXT_PUBLIC_RPC_URL` settings are no
+longer read: one endpoint would serve the same chain under both network labels.
+Browser updates call same-origin `/api/rpc` with `{ network, method, params }`;
+no browser CORS access to the chain node is required.
 
-Selection order is `AIN_RPC_URL`, legacy `NEXT_PUBLIC_RPC_URL`, then the existing
-devnet default. `AIN_RPC_URL` is server-side runtime configuration and is not
-exposed as a browser-selectable target. Legacy `NEXT_PUBLIC_RPC_URL` can still be
-inlined during a Next.js build, so prefer `AIN_RPC_URL` when promoting one build
-between environments. Restart the server/container after changing its environment.
-REST index reads also use the selected server endpoint; browser fallback scans
-use the same-origin RPC proxy, not another direct REST endpoint.
+The public gateways answer the REST history index (`/recent_transactions`,
+`/recent_blocks_with_transactions`, `/network_status`) with 403, so recent blocks
+and transactions come from a bounded RPC scan of the latest 1,000 blocks
+(`RECENT_SCAN_BLOCKS` in `lib/rpc.ts`) and Node Count shows `-`. Mainnet can go
+thousands of blocks without a transaction, so an empty "latest transactions" list
+is expected there. Transaction lookups that miss the hash index scan the same
+window rather than the whole chain.
 
 The proxy allows only the read methods used by the explorer: native state reads,
 block/transaction reads, balance/nonce, validators, rule/function/owner matching,
@@ -92,7 +107,12 @@ Full local output is `/mnt/newdata/gov/kpi/results/ainscan-runtime-rpc-build-202
 This confirms runtime endpoint routing and compiled page availability, not live
 browser automation, populated data on that chain, public deployment or KPI success.
 
-## KPI AWS network (2026-09-21)
+## KPI AWS network (2026-09-21, superseded)
+
+Superseded by the mainnet/testnet selection above: the gateway below stopped
+accepting connections, which made the homepage server render exceed the Vercel
+function timeout.
+
 
 The production deployment selects `http://3.89.93.84:8088/json-rpc` in
 `vercel.json`. This is a read-only gateway on the first KPI EC2 validator,

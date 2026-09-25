@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import CopyButton from './CopyButton';
 import { transactionOperations } from '@/lib/transaction-operations';
 import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';

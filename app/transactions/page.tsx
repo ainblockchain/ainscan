@@ -1,11 +1,17 @@
-import { getRecentTransactions } from '@/lib/rpc';
+import { getRecentTransactions, RECENT_SCAN_BLOCKS } from '@/lib/rpc';
 import TransactionsTable from '@/components/TransactionsTable';
 import ExplorerRefresh from '@/components/ExplorerRefresh';
+import { parseNetwork } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TransactionsPage() {
-  const transactions = await getRecentTransactions(50);
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: { network?: string | string[] };
+}) {
+  const network = parseNetwork(searchParams.network);
+  const transactions = await getRecentTransactions(network, 50);
 
   return (
     <div className="space-y-4">
@@ -19,7 +25,7 @@ export default async function TransactionsPage() {
           <TransactionsTable transactions={transactions} />
         ) : (
           <p className="px-4 py-8 text-center text-gray-500 text-sm">
-            No transactions found.
+            No transactions in the latest {RECENT_SCAN_BLOCKS.toLocaleString('en-US')} blocks.
           </p>
         )}
       </div>

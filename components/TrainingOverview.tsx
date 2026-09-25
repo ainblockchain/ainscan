@@ -1,14 +1,15 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { rpc, getValue } from '@/lib/rpc';
 import { LESSONS_ROOT, validPublisher, trainingOverview } from '@/lib/training-overview';
 import { INFERENCE_ROOT } from '@/lib/inference-overview';
+import { DEFAULT_NETWORK, NETWORK_PARAM, type Network } from '@/lib/network';
 
-export default async function TrainingOverview({ publisher }: { publisher?: string }) {
+export default async function TrainingOverview({ network, publisher }: { network: Network; publisher?: string }) {
   let publishers: string[] = [];
   let discoveryFailed = false;
   let publisherListLimited = false;
   const discovered = new Set<string>();
-  const responses = await Promise.allSettled([LESSONS_ROOT, INFERENCE_ROOT].map(ref => rpc('ain_get', { type: 'GET_VALUE', ref, is_shallow: true })));
+  const responses = await Promise.allSettled([LESSONS_ROOT, INFERENCE_ROOT].map(ref => rpc(network, 'ain_get', { type: 'GET_VALUE', ref, is_shallow: true })));
   for (const response of responses) {
     try {
       if (response.status === 'rejected') throw new Error('Publisher discovery failed');
@@ -26,7 +27,7 @@ export default async function TrainingOverview({ publisher }: { publisher?: stri
   const valid = publisher !== undefined && validPublisher(publisher);
   if (valid) {
     try {
-      overview = trainingOverview(publisher, await getValue(`${LESSONS_ROOT}/${publisher}`));
+      overview = trainingOverview(publisher, await getValue(network, `${LESSONS_ROOT}/${publisher}`));
     } catch {
       stateFailed = true;
     }
@@ -36,6 +37,7 @@ export default async function TrainingOverview({ publisher }: { publisher?: stri
     <h2 className="text-xl font-semibold text-gray-900">Training Records</h2>
     <p className="text-sm text-gray-500">Current lesson state from the connected blockchain, grouped by publisher. Counts describe the loaded records, not a history of simultaneous training, verified model support or successful inference.</p>
     <form action="/knowledge" method="get" className="flex flex-wrap gap-2 items-end">
+      {network !== DEFAULT_NETWORK && <input type="hidden" name={NETWORK_PARAM} value={network} />}
       <label className="text-sm text-gray-700">Publisher
         <input name="publisher" list="training-publishers" defaultValue={publisher ?? ''} maxLength={128} required pattern="[a-zA-Z0-9_-]+" className="block border border-gray-300 rounded px-3 py-2" />
       </label>

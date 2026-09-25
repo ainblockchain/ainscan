@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { getTransactionByHash, getBlockByNumber, getLastBlockNumber, getBlockList } from '@/lib/rpc';
+import Link from '@/components/NetworkLink';
+import { getTransactionByHash, getBlockByNumber, getLastBlockNumber, getBlockList, RECENT_SCAN_BLOCKS } from '@/lib/rpc';
+import { parseNetwork, type Network } from '@/lib/network';
 import { formatTimestamp, getOperationType } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
 import { trainingRecord, trainingRecordLatency } from '@/lib/training-record';
@@ -31,9 +32,9 @@ function normalizeTx(raw: any, blockNumber?: number, blockTimestamp?: number) {
 }
 
 /** Try to find a transaction by hash in a specific block. */
-async function findTxInBlock(blockNumber: number, hash: string) {
+async function findTxInBlock(network: Network, blockNumber: number, hash: string) {
   if (!Number.isSafeInteger(blockNumber) || blockNumber < 0) return null;
-  const block = await getBlockByNumber(blockNumber, true);
+  const block = await getBlockByNumber(network, blockNumber, true);
   if (block === null) return null;
   if (!Array.isArray(block?.transactions)) throw new Error('Full block unavailable');
   for (const tx of block.transactions) {
@@ -44,18 +45,20 @@ async function findTxInBlock(blockNumber: number, hash: string) {
   return null;
 }
 
-/** Scan recent blocks to find a transaction by hash. */
-async function scanForTx(hash: string) {
-  const lastBlock = await getLastBlockNumber();
+/** Scan a bounded window of recent blocks to find a transaction by hash. */
+async function scanForTx(network: Network, hash: string) {
+  const lastBlock = await getLastBlockNumber(network);
   if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
-  for (let end = lastBlock; end >= 0; ) {
-    const start = Math.max(0, end - 19);
-    const blocks = await getBlockList(start, end + 1);
+  // Unbounded, this walks the whole chain for unknown hashes (e.g. a hash from the other network).
+  const floor = Math.max(0, lastBlock - RECENT_SCAN_BLOCKS + 1);
+  for (let end = lastBlock; end >= floor; ) {
+    const start = Math.max(floor, end - 19);
+    const blocks = await getBlockList(network, start, end + 1);
     if (!Array.isArray(blocks)) throw new Error('Invalid block list');
     for (const b of blocks) {
       if (b.transactions?.length > 0) {
-        const found = await findTxInBlock(b.number, hash);
+        const found = await findTxInBlock(network, b.number, hash);
         if (found) return found;
       }
     }
@@ -69,11 +72,12 @@ export default async function TransactionDetailPage({
   searchParams,
 }: {
   params: { hash: string };
-  searchParams: { block?: string };
+  searchParams: { block?: string; network?: string | string[] };
 }) {
+  const network = parseNetwork(searchParams.network);
   // Try getTransactionByHash first (works when tx index is enabled)
   // Response may be a wrapper: { state, number, transaction: { tx_body, hash, address }, receipt }
-  let tx = await getTransactionByHash(params.hash)
+  let tx = await getTransactionByHash(network, params.hash)
     .then((raw) => {
       if (!raw) return null;
       if (raw.transaction && typeof raw.transaction === 'object') {
@@ -91,12 +95,12 @@ export default async function TransactionDetailPage({
 
   // Fallback: fetch from specific block if block number is provided
   if (!tx && searchParams.block) {
-    tx = await findTxInBlock(parseInt(searchParams.block, 10), params.hash);
+    tx = await findTxInBlock(network, parseInt(searchParams.block, 10), params.hash);
   }
 
   // Last resort: scan blocks
   if (!tx) {
-    tx = await scanForTx(params.hash);
+    tx = await scanForTx(network, params.hash);
   }
 
   if (!tx) notFound();
@@ -108,7 +112,7 @@ export default async function TransactionDetailPage({
   const channelIds = transactionChannels(tx.operation);
   const escrows = transactionEscrows(tx.operation);
   const inclusionBlock = Number.isSafeInteger(tx.block_number) && tx.block_number >= 0
-    ? await getBlockByNumber(tx.block_number, tx.block_number === 0).catch(() => null) : null;
+    ? await getBlockByNumber(network, tx.block_number, tx.block_number === 0).catch(() => null) : null;
   const latency = lesson ? trainingRecordLatency(lesson, inclusionBlock, tx.hash) : null;
 
   const details = [

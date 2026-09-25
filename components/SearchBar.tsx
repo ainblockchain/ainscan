@@ -3,25 +3,30 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { isBlockNumber, isTxHash, isAddress } from '@/lib/utils';
+import { withNetwork } from '@/lib/network';
+import { useNetwork } from './NetworkProvider';
 
 export default function SearchBar({ large = false }: { large?: boolean }) {
   const [query, setQuery] = useState('');
   const router = useRouter();
+  const network = useNetwork();
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
 
+    let target: string;
     if (isBlockNumber(q)) {
-      router.push(`/blocks/${q}`);
+      target = `/blocks/${q}`;
     } else if (isTxHash(q)) {
-      router.push(`/transactions/${q}`);
+      target = `/transactions/${q}`;
     } else if (isAddress(q)) {
-      router.push(`/accounts/${q}`);
+      target = `/accounts/${q}`;
     } else {
-      router.push(`/database/${q.replace(/^\//, '')}`);
+      target = `/database/${q.replace(/^\//, '')}`;
     }
+    router.push(withNetwork(target, network));
     setQuery('');
   }
 

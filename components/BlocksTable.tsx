@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { truncateHash, truncateAddress, timeAgo } from '@/lib/utils';
 
 interface BlockRow {

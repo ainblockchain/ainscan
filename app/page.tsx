@@ -1,25 +1,36 @@
-import Link from 'next/link';
-import { getLastBlockNumber, getNodeCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions, getBlockByNumber } from '@/lib/rpc';
+import Link from '@/components/NetworkLink';
+import { getLastBlockNumber, getNodeCount, getConsensusStatus, getRecentBlocksWithTransactions, getRecentTransactions, getBlockByNumber, getBlockHeadersList, RECENT_SCAN_BLOCKS } from '@/lib/rpc';
 import SearchBar from '@/components/SearchBar';
 import NetworkStats from '@/components/NetworkStats';
 import BlocksTable from '@/components/BlocksTable';
 import TransactionsTable from '@/components/TransactionsTable';
 import { genesisHash } from '@/lib/chain-snapshot';
+import { parseNetwork } from '@/lib/network';
 import BenchmarkStats from '@/components/BenchmarkStats';
 import ExplorerRefresh from '@/components/ExplorerRefresh';
 
 export const dynamic = 'force-dynamic';
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: { network?: string | string[] };
+}) {
+  const network = parseNetwork(searchParams.network);
   // Fetch sequentially to avoid rate limiting on devnet
-  const blockNumber = await getLastBlockNumber().catch(() => null);
+  const blockNumber = await getLastBlockNumber(network).catch(() => null);
   const [nodeCount, consensusStatus, genesis] = await Promise.all([
-    getNodeCount().catch(() => null),
-    getConsensusStatus().catch(() => null),
-    getBlockByNumber(0, true).catch(() => null),
+    getNodeCount(network).catch(() => null),
+    getConsensusStatus(network).catch(() => null),
+    getBlockByNumber(network, 0, true).catch(() => null),
   ]);
-  const recentBlocks = await getRecentBlocksWithTransactions(10).catch(() => []);
-  const recentTxs = await getRecentTransactions(10).catch(() => []);
+  let recentBlocks = await getRecentBlocksWithTransactions(network, 10).catch(() => []);
+  // Mainnet often has no transactions in the scanned window; show the latest blocks instead of an empty table.
+  if (recentBlocks.length === 0 && Number.isSafeInteger(blockNumber) && blockNumber! >= 0) {
+    const headers = await getBlockHeadersList(network, Math.max(0, blockNumber! - 9), blockNumber! + 1).catch(() => []);
+    recentBlocks = Array.isArray(headers) ? [...headers].sort((a: any, b: any) => b.number - a.number) : [];
+  }
+  const recentTxs = await getRecentTransactions(network, 10).catch(() => []);
 
   const consensusState = consensusStatus?.state || consensusStatus?.status || null;
 
@@ -65,7 +76,7 @@ export default async function HomePage() {
             <TransactionsTable transactions={recentTxs} compact />
           ) : (
             <p className="px-4 py-8 text-center text-gray-500 text-sm">
-              No recent transactions found.
+              No transactions in the latest {RECENT_SCAN_BLOCKS.toLocaleString('en-US')} blocks.
             </p>
           )}
         </div>

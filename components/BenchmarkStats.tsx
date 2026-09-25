@@ -1,11 +1,15 @@
 'use client';
 import useSWR from 'swr';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { BenchmarkStatus, benchmarkIsStale } from '@/lib/benchmark-status';
+import { NETWORK_PARAM } from '@/lib/network';
+import { useNetwork } from './NetworkProvider';
 const number = (n: number | null | undefined) => n == null ? '—' : n.toLocaleString('en-US', {maximumFractionDigits: 2});
 export default function BenchmarkStats() {
-  const {data, error} = useSWR('/api/benchmarks', async url => {
+  const network = useNetwork();
+  // Keyed by network so one network's feed is never shown under the other.
+  const {data, error} = useSWR(`/api/benchmarks?${NETWORK_PARAM}=${network}`, async (url: string) => {
     const response = await fetch(url, {cache: 'no-store'});
     if (!response.ok) throw new Error('Benchmark feed unavailable');
     return response.json() as Promise<{genesisHash: string; l1: BenchmarkStatus | null; l2_peer: BenchmarkStatus | null}>;
