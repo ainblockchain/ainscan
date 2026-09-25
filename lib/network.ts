@@ -4,13 +4,13 @@
 export const NETWORKS = {
   mainnet: {
     label: 'Mainnet',
-    chainId: 1,
+    chainId: 101,
     rpcUrl: 'https://mainnet-api.ainetwork.ai/json-rpc',
     eventUrl: 'wss://mainnet-event.ainetwork.ai',
   },
   testnet: {
     label: 'Testnet',
-    chainId: 0,
+    chainId: 102,
     rpcUrl: 'https://testnet-api.ainetwork.ai/json-rpc',
     eventUrl: 'wss://testnet-event.ainetwork.ai',
   },

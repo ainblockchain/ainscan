@@ -4,13 +4,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import DatabaseTreeView from '@/components/DatabaseTreeView';
 import Link from '@/components/NetworkLink';
 import { useNetwork } from '@/components/NetworkProvider';
+import { useSearchParams } from 'next/navigation';
+import LayerSelector from '@/components/LayerSelector';
 import type { Network } from '@/lib/network';
 
-async function clientRpc(network: Network, method: string, params: Record<string, any> = {}): Promise<any> {
+async function clientRpc(network: Network, layer: string, method: string, params: Record<string, any> = {}): Promise<any> {
   const res = await fetch('/api/rpc', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ network, method, params }),
+    body: JSON.stringify({ network, method, params: { ...params, layer, is_final: true } }),
   });
   const json = await res.json();
   if (json.error) throw new Error(typeof json.error === 'string' ? json.error : json.error.message);
@@ -18,7 +20,7 @@ async function clientRpc(network: Network, method: string, params: Record<string
   if (wrapper && typeof wrapper === 'object' && 'code' in wrapper && wrapper.code !== 0 && wrapper.result == null) {
     throw new Error(wrapper.message || `RPC error code ${wrapper.code}`);
   }
-  return wrapper?.result ?? wrapper;
+  return wrapper && typeof wrapper === 'object' && 'result' in wrapper ? wrapper.result : wrapper;
 }
 
 type TabKey = 'value' | 'rule' | 'function' | 'owner';
@@ -36,9 +38,11 @@ export default function DatabasePage({
   params: { path?: string[] };
 }) {
   const network = useNetwork();
+  const layer = useSearchParams().get('layer') === 'L1' ? 'L1' : 'L2';
   const dbPath = '/' + (params.path || []).join('/');
   // Responses for a previous network/path must not land in the current view.
   const viewKey = useRef('');
+  const pages = useRef<Record<string, { proof: string | null; cursor: string | null }>>({});
   const [activeTab, setActiveTab] = useState<TabKey>('value');
   const [data, setData] = useState<Record<TabKey, any>>({
     value: undefined,
@@ -60,30 +64,28 @@ export default function DatabasePage({
   });
 
   const fetchTab = useCallback(
-    async (tab: TabKey) => {
-      const key = `${network}:${dbPath}`;
+    async (tab: TabKey, more = false) => {
+      const key = `${network}:${layer}:${dbPath}`;
       const current = () => viewKey.current === key;
       const rpcType = tabs.find((t) => t.key === tab)!.rpcType;
       setLoading((prev) => ({ ...prev, [tab]: true }));
       setErrors((prev) => ({ ...prev, [tab]: null }));
       try {
-        let result;
-        // For root and shallow paths, always start with shallow fetch to avoid timeout
-        const depth = dbPath.split('/').filter(Boolean).length;
-        if (depth <= 2) {
-          result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
-        } else {
-          try {
-            result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath });
-          } catch {
-            // Fallback to shallow for large deep nodes
-            result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
-          }
-        }
+        const proofPath = '/' + ({ value: 'values', rule: 'rules', function: 'functions', owner: 'owners' }[tab]) + dbPath;
+        const before = await clientRpc(network, layer, 'ain_getProofHash', { ref: proofPath });
+        const previous = pages.current[tab];
+        if (more && (!previous || previous.proof !== before)) throw Error('State changed while browsing. Refresh this view to load a consistent page.');
+        let result = await clientRpc(network, layer, 'ain_get', { type: rpcType, ref: dbPath,
+          is_partial: true, ...(more ? { last_end_label: previous.cursor } : {}) });
+        const after = await clientRpc(network, layer, 'ain_getProofHash', { ref: proofPath });
+        if (before !== after) throw Error('State changed during this read. Refresh to try again.');
+        if (!current()) return;
+        pages.current[tab] = { proof: after, cursor: result?.['#end_label'] || null };
         // Strip #state_ph placeholders from shallow results, keeping only key names
         if (result && typeof result === 'object') {
           const cleaned: Record<string, any> = {};
           for (const [key, val] of Object.entries(result)) {
+            if (key.startsWith('#')) continue;
             if (typeof val === 'object' && val !== null && '#state_ph' in (val as any)) {
               cleaned[key] = { '...': '(click to expand)' };
             } else {
@@ -93,7 +95,7 @@ export default function DatabasePage({
           result = cleaned;
         }
         if (!current()) return;
-        setData((prev) => ({ ...prev, [tab]: result }));
+        setData((prev) => ({ ...prev, [tab]: more && result && typeof result === 'object' ? { ...prev[tab], ...result } : result }));
       } catch (err: any) {
         if (!current()) return;
         setErrors((prev) => ({
@@ -105,11 +107,12 @@ export default function DatabasePage({
         if (current()) setLoading((prev) => ({ ...prev, [tab]: false }));
       }
     },
-    [dbPath, network],
+    [dbPath, network, layer],
   );
 
   useEffect(() => {
-    viewKey.current = `${network}:${dbPath}`;
+    viewKey.current = `${network}:${layer}:${dbPath}`;
+    pages.current = {};
     setData({
       value: undefined,
       rule: undefined,
@@ -119,7 +122,7 @@ export default function DatabasePage({
     setLoading({ value: false, rule: false, function: false, owner: false });
     setActiveTab('value');
     fetchTab('value');
-  }, [dbPath, network, fetchTab]);
+  }, [dbPath, network, layer, fetchTab]);
 
   useEffect(() => {
     if (data[activeTab] === undefined && !loading[activeTab]) {
@@ -136,7 +139,9 @@ export default function DatabasePage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">Database Explorer</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{layer} Database Explorer</h1>
+      <LayerSelector />
+      <p className="text-sm text-gray-500">Latest committed {layer} state. Browse values, rules, functions and owners for any public app.</p>
 
       <nav className="flex items-center gap-1 text-sm text-gray-500 flex-wrap">
         {pathParts.length === 0 ? (
@@ -182,6 +187,10 @@ export default function DatabasePage({
           </nav>
         </div>
 
+        <div className="flex gap-4 px-4 pt-3 text-sm">
+          <button className="text-blue-600" disabled={loading[activeTab]} onClick={() => fetchTab(activeTab)}>Refresh state</button>
+          {pages.current[activeTab]?.cursor && <button className="text-blue-600" disabled={loading[activeTab]} onClick={() => fetchTab(activeTab, true)}>Load more entries</button>}
+        </div>
         <div className="p-4 min-h-[200px]">
           {loading[activeTab] ? (
             <p className="text-gray-500 text-sm">Loading...</p>
