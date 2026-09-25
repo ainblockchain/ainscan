@@ -1,4 +1,4 @@
-import { getValue } from './rpc';
+import { getValue, type Network } from './rpc';
 import { GraphData, GraphNode, GraphEdge, GraphStats } from './types';
 
 /**
@@ -182,18 +182,18 @@ function buildFullGraph(
 
 // -- public API ---------------------------------------------------------------
 
-export async function getKnowledgeGraph(): Promise<GraphData> {
+export async function getKnowledgeGraph(network: Network): Promise<GraphData> {
   const [graphNodes, graphEdges, topicsData, explorationsData] = await Promise.all([
-    getValue('/apps/knowledge/graph/nodes').catch(() => null),
-    getValue('/apps/knowledge/graph/edges').catch(() => null),
-    getValue('/apps/knowledge/topics').catch(() => null),
-    getValue('/apps/knowledge/explorations').catch(() => null),
+    getValue(network, '/apps/knowledge/graph/nodes').catch(() => null),
+    getValue(network, '/apps/knowledge/graph/edges').catch(() => null),
+    getValue(network, '/apps/knowledge/topics').catch(() => null),
+    getValue(network, '/apps/knowledge/explorations').catch(() => null),
   ]);
   return buildFullGraph(graphNodes, graphEdges, topicsData, explorationsData);
 }
 
-export async function getTopicSubgraph(topicPath: string): Promise<GraphData> {
-  const graph = await getKnowledgeGraph();
+export async function getTopicSubgraph(network: Network, topicPath: string): Promise<GraphData> {
+  const graph = await getKnowledgeGraph(network);
   const topicId = `topic:${topicPath}`;
   const topicKey = topicPath.replace(/\//g, '|');
 
@@ -229,8 +229,8 @@ export async function getTopicSubgraph(topicPath: string): Promise<GraphData> {
   return { nodes, edges: relevantEdges };
 }
 
-export async function getExplorationNeighbors(nodeId: string): Promise<GraphData> {
-  const graph = await getKnowledgeGraph();
+export async function getExplorationNeighbors(network: Network, nodeId: string): Promise<GraphData> {
+  const graph = await getKnowledgeGraph(network);
 
   const connectedEdges = graph.edges.filter(
     (e) => e.from === nodeId || e.to === nodeId
@@ -246,11 +246,11 @@ export async function getExplorationNeighbors(nodeId: string): Promise<GraphData
   return { nodes, edges: connectedEdges };
 }
 
-export async function getGraphStats(): Promise<GraphStats> {
+export async function getGraphStats(network: Network): Promise<GraphStats> {
   const [topicsData, explorationsData, graphData] = await Promise.all([
-    getValue('/apps/knowledge/topics').catch(() => null),
-    getValue('/apps/knowledge/explorations').catch(() => null),
-    getValue('/apps/knowledge/graph/nodes').catch(() => null),
+    getValue(network, '/apps/knowledge/topics').catch(() => null),
+    getValue(network, '/apps/knowledge/explorations').catch(() => null),
+    getValue(network, '/apps/knowledge/graph/nodes').catch(() => null),
   ]);
 
   function countTopics(obj: any): number {

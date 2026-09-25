@@ -1,8 +1,9 @@
-import Link from 'next/link';
-import { getLastBlockNumber, getBlockHeadersList, getRecentBlocksWithTransactions } from '@/lib/rpc';
+import Link from '@/components/NetworkLink';
+import { getLastBlockNumber, getBlockHeadersList, getRecentBlocksWithTransactions, RECENT_SCAN_BLOCKS } from '@/lib/rpc';
 import BlocksTable from '@/components/BlocksTable';
 import Pagination from '@/components/Pagination';
 import ExplorerRefresh from '@/components/ExplorerRefresh';
+import { parseNetwork } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +12,12 @@ const PAGE_SIZE = 20;
 export default async function BlocksPage({
   searchParams,
 }: {
-  searchParams: { page?: string; filter?: string };
+  searchParams: { page?: string; filter?: string; network?: string | string[] };
 }) {
+  const network = parseNetwork(searchParams.network);
   const filterTx = searchParams.filter === 'tx';
   const page = Math.max(1, parseInt(searchParams.page || '1', 10));
-  const lastBlock = await getLastBlockNumber();
+  const lastBlock = await getLastBlockNumber(network);
   if (!Number.isSafeInteger(lastBlock) || lastBlock < 0) throw new Error('Invalid latest block number');
 
   let sortedBlocks: any[] = [];
@@ -24,7 +26,7 @@ export default async function BlocksPage({
 
   if (filterTx) {
     // Show only blocks with transactions
-    const blocks = await getRecentBlocksWithTransactions(PAGE_SIZE * page + 1);
+    const blocks = await getRecentBlocksWithTransactions(network, PAGE_SIZE * page + 1);
     const allSorted = blocks.sort((a: any, b: any) => b.number - a.number);
     const start = (page - 1) * PAGE_SIZE;
     sortedBlocks = allSorted.slice(start, start + PAGE_SIZE);
@@ -34,7 +36,7 @@ export default async function BlocksPage({
     const to = lastBlock - (page - 1) * PAGE_SIZE;
     const from = Math.max(0, to - PAGE_SIZE + 1);
     const blocks = to >= 0
-      ? await getBlockHeadersList(from, to + 1)
+      ? await getBlockHeadersList(network, from, to + 1)
       : [];
     sortedBlocks = Array.isArray(blocks)
       ? [...blocks].sort((a: any, b: any) => b.number - a.number)
@@ -75,7 +77,9 @@ export default async function BlocksPage({
           <BlocksTable blocks={sortedBlocks} />
         ) : (
           <p className="px-4 py-8 text-center text-gray-500 text-sm">
-            No blocks found.
+            {filterTx
+              ? `No blocks with transactions in the latest ${RECENT_SCAN_BLOCKS.toLocaleString('en-US')} blocks.`
+              : 'No blocks found.'}
           </p>
         )}
         <Pagination

@@ -28,6 +28,7 @@ Blockchain explorer for [AI Network](https://ainetwork.ai).
 See [resource-limited production build verification](docs/production-build-verification.md)
 for the Docker build command and [runtime chain configuration](docs/runtime-chain-configuration.md)
 to keep server-rendered pages and browser updates on the same blockchain.
+Use the header selector (or `?network=testnet`) to switch between AIN mainnet and testnet.
 
 | Layer | Technology |
 |---|---|

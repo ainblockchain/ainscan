@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { truncateHash, truncateAddress, timeAgo, getOperationType } from '@/lib/utils';
 import NativeRecordSummary from './NativeRecordSummary';
 

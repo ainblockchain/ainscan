@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import DatabaseTreeView from '@/components/DatabaseTreeView';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
+import { useNetwork } from '@/components/NetworkProvider';
+import type { Network } from '@/lib/network';
 
-async function clientRpc(method: string, params: Record<string, any> = {}): Promise<any> {
+async function clientRpc(network: Network, method: string, params: Record<string, any> = {}): Promise<any> {
   const res = await fetch('/api/rpc', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
+    body: JSON.stringify({ network, method, params }),
   });
   const json = await res.json();
   if (json.error) throw new Error(typeof json.error === 'string' ? json.error : json.error.message);
@@ -33,7 +35,10 @@ export default function DatabasePage({
 }: {
   params: { path?: string[] };
 }) {
+  const network = useNetwork();
   const dbPath = '/' + (params.path || []).join('/');
+  // Responses for a previous network/path must not land in the current view.
+  const viewKey = useRef('');
   const [activeTab, setActiveTab] = useState<TabKey>('value');
   const [data, setData] = useState<Record<TabKey, any>>({
     value: undefined,
@@ -56,6 +61,8 @@ export default function DatabasePage({
 
   const fetchTab = useCallback(
     async (tab: TabKey) => {
+      const key = `${network}:${dbPath}`;
+      const current = () => viewKey.current === key;
       const rpcType = tabs.find((t) => t.key === tab)!.rpcType;
       setLoading((prev) => ({ ...prev, [tab]: true }));
       setErrors((prev) => ({ ...prev, [tab]: null }));
@@ -64,13 +71,13 @@ export default function DatabasePage({
         // For root and shallow paths, always start with shallow fetch to avoid timeout
         const depth = dbPath.split('/').filter(Boolean).length;
         if (depth <= 2) {
-          result = await clientRpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+          result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
         } else {
           try {
-            result = await clientRpc('ain_get', { type: rpcType, ref: dbPath });
+            result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath });
           } catch {
             // Fallback to shallow for large deep nodes
-            result = await clientRpc('ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+            result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
           }
         }
         // Strip #state_ph placeholders from shallow results, keeping only key names
@@ -85,30 +92,34 @@ export default function DatabasePage({
           }
           result = cleaned;
         }
+        if (!current()) return;
         setData((prev) => ({ ...prev, [tab]: result }));
       } catch (err: any) {
+        if (!current()) return;
         setErrors((prev) => ({
           ...prev,
           [tab]: err.message || 'Failed to fetch',
         }));
         setData((prev) => ({ ...prev, [tab]: null }));
       } finally {
-        setLoading((prev) => ({ ...prev, [tab]: false }));
+        if (current()) setLoading((prev) => ({ ...prev, [tab]: false }));
       }
     },
-    [dbPath],
+    [dbPath, network],
   );
 
   useEffect(() => {
+    viewKey.current = `${network}:${dbPath}`;
     setData({
       value: undefined,
       rule: undefined,
       function: undefined,
       owner: undefined,
     });
+    setLoading({ value: false, rule: false, function: false, owner: false });
     setActiveTab('value');
     fetchTab('value');
-  }, [dbPath, fetchTab]);
+  }, [dbPath, network, fetchTab]);
 
   useEffect(() => {
     if (data[activeTab] === undefined && !loading[activeTab]) {

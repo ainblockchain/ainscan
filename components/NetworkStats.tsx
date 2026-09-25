@@ -1,10 +1,11 @@
 'use client';
 
 import useSWR from 'swr';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { formatNumber } from '@/lib/utils';
 import { getBlockList, getLastBlockNumber, getBlockByNumber } from '@/lib/rpc';
 import { chainSnapshot } from '@/lib/chain-snapshot';
+import { useNetwork } from './NetworkProvider';
 
 interface NetworkStatsProps {
   blockNumber: number | null;
@@ -19,8 +20,11 @@ export default function NetworkStats({
   consensusState,
   genesisHash,
 }: NetworkStatsProps) {
-  const { data: snapshot, error } = useSWR('chain-throughput', () => chainSnapshot({
-    genesis: () => getBlockByNumber(0, true), height: getLastBlockNumber, blocks: getBlockList,
+  const network = useNetwork();
+  const { data: snapshot, error } = useSWR(['chain-throughput', network], ([, net]) => chainSnapshot({
+    genesis: () => getBlockByNumber(net, 0, true),
+    height: () => getLastBlockNumber(net),
+    blocks: (from, to) => getBlockList(net, from, to),
   }), { refreshInterval: 3000, keepPreviousData: false });
   const changed = Boolean(snapshot && genesisHash && snapshot.genesisHash !== genesisHash);
   const throughput = !error && !changed ? snapshot?.throughput : null;

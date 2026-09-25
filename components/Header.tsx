@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { usePathname } from 'next/navigation';
 import SearchBar from './SearchBar';
+import NetworkSelector from './NetworkSelector';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -49,6 +50,7 @@ export default function Header() {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <NetworkSelector />
             <div className="hidden sm:block w-80">
               <SearchBar />
             </div>

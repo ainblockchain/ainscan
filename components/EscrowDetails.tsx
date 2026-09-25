@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { useRpc } from '@/hooks/useRpc';
 import type { EscrowReference } from '@/lib/state-channel';
 

@@ -1,20 +1,24 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { getValidatorInfo, getBalance } from '@/lib/rpc';
 import { formatAIN } from '@/lib/utils';
 import CopyButton from '@/components/CopyButton';
+import { parseNetwork } from '@/lib/network';
 
 export default async function ValidatorDetailPage({
   params,
+  searchParams,
 }: {
   params: { address: string };
+  searchParams: { network?: string | string[] };
 }) {
+  const network = parseNetwork(searchParams.network);
   const { address } = params;
   if (!address || !address.startsWith('0x')) notFound();
 
   const [validatorInfo, balance] = await Promise.all([
-    getValidatorInfo(address).catch(() => null),
-    getBalance(address).catch(() => 0),
+    getValidatorInfo(network, address).catch(() => null),
+    getBalance(network, address).catch(() => 0),
   ]);
 
   if (!validatorInfo) notFound();

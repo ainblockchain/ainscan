@@ -1,19 +1,23 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { getBlockByNumber } from '@/lib/rpc';
 import { formatTimestamp, truncateHash, truncateAddress } from '@/lib/utils';
 import TransactionsTable from '@/components/TransactionsTable';
 import CopyButton from '@/components/CopyButton';
+import { parseNetwork } from '@/lib/network';
 
 export default async function BlockDetailPage({
   params,
+  searchParams,
 }: {
   params: { number: string };
+  searchParams: { network?: string | string[] };
 }) {
+  const network = parseNetwork(searchParams.network);
   const blockNumber = parseInt(params.number, 10);
   if (isNaN(blockNumber)) notFound();
 
-  const block = await getBlockByNumber(blockNumber, true).catch(() => null);
+  const block = await getBlockByNumber(network, blockNumber, true).catch(() => null);
   if (!block) notFound();
 
   const transactions = Array.isArray(block.transactions)

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { truncateAddress, formatAIN } from '@/lib/utils';
 
 interface NodeRow {

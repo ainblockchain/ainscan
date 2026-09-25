@@ -1,27 +1,29 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { getValue } from '@/lib/rpc';
 import { getTopicSubgraph } from '@/lib/knowledge';
 import { KnowledgeTopic, KnowledgeExploration, GraphData } from '@/lib/types';
 import TopicGraphView from './TopicGraphView';
+import { parseNetwork, type Network } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { topic: string[] };
+  searchParams: { network?: string | string[] };
 }
 
-async function getTopicInfo(topicPath: string): Promise<KnowledgeTopic | null> {
+async function getTopicInfo(network: Network, topicPath: string): Promise<KnowledgeTopic | null> {
   try {
-    return await getValue(`/apps/knowledge/topics/${topicPath}/.info`);
+    return await getValue(network, `/apps/knowledge/topics/${topicPath}/.info`);
   } catch {
     return null;
   }
 }
 
-async function getExplorations(topicPath: string): Promise<Record<string, Record<string, KnowledgeExploration>>> {
+async function getExplorations(network: Network, topicPath: string): Promise<Record<string, Record<string, KnowledgeExploration>>> {
   try {
     const topicKey = topicPath.replace(/\//g, '_');
-    const data = await getValue(`/apps/knowledge/explorations`);
+    const data = await getValue(network, `/apps/knowledge/explorations`);
     if (!data) return {};
     // Filter explorations that match this topic
     const result: Record<string, Record<string, KnowledgeExploration>> = {};
@@ -36,20 +38,21 @@ async function getExplorations(topicPath: string): Promise<Record<string, Record
   }
 }
 
-async function getSubgraph(topicPath: string): Promise<GraphData> {
+async function getSubgraph(network: Network, topicPath: string): Promise<GraphData> {
   try {
-    return await getTopicSubgraph(topicPath);
+    return await getTopicSubgraph(network, topicPath);
   } catch {
     return { nodes: [], edges: [] };
   }
 }
 
-export default async function TopicPage({ params }: PageProps) {
+export default async function TopicPage({ params, searchParams }: PageProps) {
+  const network = parseNetwork(searchParams.network);
   const topicPath = params.topic.map(decodeURIComponent).join('/');
   const [info, explorations, graphData] = await Promise.all([
-    getTopicInfo(topicPath),
-    getExplorations(topicPath),
-    getSubgraph(topicPath),
+    getTopicInfo(network, topicPath),
+    getExplorations(network, topicPath),
+    getSubgraph(network, topicPath),
   ]);
 
   // Flatten explorations into a list

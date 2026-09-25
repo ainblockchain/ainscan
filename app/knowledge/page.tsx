@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { getValue } from '@/lib/rpc';
 import { getGraphStats, getKnowledgeGraph } from '@/lib/knowledge';
 import { KnowledgeTopic, GraphStats, GraphData } from '@/lib/types';
@@ -6,28 +6,29 @@ import KnowledgeGraphView from './KnowledgeGraphView';
 import TrainingOverview from '@/components/TrainingOverview';
 import InferenceOverview from '@/components/InferenceOverview';
 import ExplorerRefresh from '@/components/ExplorerRefresh';
+import { parseNetwork, type Network } from '@/lib/network';
 
 export const dynamic = 'force-dynamic';
 
-async function getTopics(): Promise<Record<string, { '.info': KnowledgeTopic }>> {
+async function getTopics(network: Network): Promise<Record<string, { '.info': KnowledgeTopic }>> {
   try {
-    return (await getValue('/apps/knowledge/topics')) || {};
+    return (await getValue(network, '/apps/knowledge/topics')) || {};
   } catch {
     return {};
   }
 }
 
-async function getStats(): Promise<GraphStats> {
+async function getStats(network: Network): Promise<GraphStats> {
   try {
-    return await getGraphStats();
+    return await getGraphStats(network);
   } catch {
     return { topicCount: 0, explorationCount: 0, edgeCount: 0, userCount: 0 };
   }
 }
 
-async function getGraph(): Promise<GraphData> {
+async function getGraph(network: Network): Promise<GraphData> {
   try {
-    return await getKnowledgeGraph();
+    return await getKnowledgeGraph(network);
   } catch {
     return { nodes: [], edges: [] };
   }
@@ -52,8 +53,9 @@ function flattenTopics(
   return results;
 }
 
-export default async function KnowledgePage({ searchParams }: { searchParams?: { publisher?: string | string[] } }) {
-  const [topics, stats, graphData] = await Promise.all([getTopics(), getStats(), getGraph()]);
+export default async function KnowledgePage({ searchParams }: { searchParams?: { publisher?: string | string[]; network?: string | string[] } }) {
+  const network = parseNetwork(searchParams?.network);
+  const [topics, stats, graphData] = await Promise.all([getTopics(network), getStats(network), getGraph(network)]);
   const topicList = flattenTopics(topics);
 
   return (
@@ -66,8 +68,8 @@ export default async function KnowledgePage({ searchParams }: { searchParams?: {
         </p>
       </div>
 
-      <TrainingOverview publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
-      <InferenceOverview publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
+      <TrainingOverview network={network} publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
+      <InferenceOverview network={network} publisher={typeof searchParams?.publisher === 'string' ? searchParams.publisher : undefined} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

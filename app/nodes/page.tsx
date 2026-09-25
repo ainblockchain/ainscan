@@ -1,12 +1,18 @@
-import Link from 'next/link';
+import Link from '@/components/NetworkLink';
 import { getLastBlockNumber, getValidatorsByNumber } from '@/lib/rpc';
 import NodesTable from '@/components/NodesTable';
+import { parseNetwork } from '@/lib/network';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
-export default async function NodesPage() {
-  const lastBlock = await getLastBlockNumber();
-  const validatorsRaw = await getValidatorsByNumber(lastBlock).catch(() => null);
+export default async function NodesPage({
+  searchParams,
+}: {
+  searchParams: { network?: string | string[] };
+}) {
+  const network = parseNetwork(searchParams.network);
+  const lastBlock = await getLastBlockNumber(network);
+  const validatorsRaw = await getValidatorsByNumber(network, lastBlock).catch(() => null);
 
   // The validators response is a map of address -> { stake, proposal_right }
   const nodes: { address: string; stake: number; proposalRight: boolean }[] = [];
