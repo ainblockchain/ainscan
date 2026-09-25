@@ -13,6 +13,8 @@ export function rpcEndpoint(network: Network): string {
 }
 
 export const EXPLORER_RPC_METHODS = new Set([
+  'ain_getLayerInfo', 'ain_listTransactions', 'ain_getIndexedTransaction',
+  'ain_getStateChannel', 'ain_getStateChannelEvents', 'ain_getProofHash', 'ain_getStateProof',
   'ain_get', 'ain_getBalance', 'ain_getNonce', 'ain_getBlockByHash', 'ain_getBlockByNumber',
   'ain_getBlockHeadersList', 'ain_getBlockList', 'ain_getBlockTransactionCountByNumber',
   'ain_getLastBlock', 'ain_getLastBlockNumber', 'ain_getTransactionByBlockNumberAndIndex',

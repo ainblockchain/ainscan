@@ -9,10 +9,11 @@ import NetworkSelector from './NetworkSelector';
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/blocks', label: 'Blocks' },
-  { href: '/transactions', label: 'Transactions' },
+  { href: '/layers/L1/transactions', label: 'L1 Transactions' },
+  { href: '/layers/L2/transactions', label: 'L2 Transactions' },
   { href: '/nodes', label: 'Nodes' },
   { href: '/knowledge', label: 'Knowledge' },
-  { href: '/database', label: 'Database' },
+  { href: '/database/apps', label: 'Apps & State' },
 ];
 
 export default function Header() {

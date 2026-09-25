@@ -20,6 +20,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'params must be an object' }, { status: 400 });
     }
 
+    if (params?.layer !== undefined && !['L1', 'L2'].includes(params.layer)) {
+      return NextResponse.json({ error: 'Unsupported layer' }, { status: 400 });
+    }
+
     const res = await fetch(rpcEndpoint(network), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +31,7 @@ export async function POST(request: NextRequest) {
         jsonrpc: '2.0',
         id: ++requestId,
         method,
-        params: { ...params, protoVer: '1.0.0' },
+        params: { layer: 'L1', ...params, protoVer: '1.0.0' },
       }),
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),

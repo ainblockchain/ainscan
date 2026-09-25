@@ -20,7 +20,7 @@ export default function SearchBar({ large = false }: { large?: boolean }) {
     if (isBlockNumber(q)) {
       target = `/blocks/${q}`;
     } else if (isTxHash(q)) {
-      target = `/transactions/${q}`;
+      target = `/search?q=${encodeURIComponent(q)}`;
     } else if (isAddress(q)) {
       target = `/accounts/${q}`;
     } else {

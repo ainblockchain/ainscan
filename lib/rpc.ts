@@ -12,6 +12,7 @@ async function sleep(ms: number) {
 }
 
 export async function rpc(network: Network, method: string, params: Record<string, any> = {}): Promise<any> {
+  params = { layer: 'L1', ...params };
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const browser = typeof window !== 'undefined';
     const res = await fetch(browser ? '/api/rpc' : rpcEndpoint(network), {
