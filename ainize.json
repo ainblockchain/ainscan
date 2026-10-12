@@ -1,0 +1,6 @@
+{
+  "name": "ainscan",
+  "kind": "nextjs",
+  "port": 3000,
+  "healthcheck": "/database"
+}
