@@ -59,6 +59,36 @@ export default function DatabasePage({
     owner: null,
   });
 
+  // A node with more than 1000 children cannot be listed in one shallow read (the chain answers
+  // "exceeds the max sibling limit"). Such nodes are read in pages: a partial read returns a batch
+  // of child keys and an end label to continue from.
+  const MAX_PARTIAL_PAGES = 200;
+  const readShallow = async (rpcType: string, ref: string) => {
+    try {
+      return await clientRpc(network, 'ain_get', { type: rpcType, ref, is_shallow: true });
+    } catch (err: any) {
+      if (!/max sibling limit/i.test(String(err?.message))) throw err;
+    }
+    const merged: Record<string, any> = {};
+    let lastEndLabel: string | undefined;
+    for (let page = 0; page < MAX_PARTIAL_PAGES; page++) {
+      const part = await clientRpc(network, 'ain_get', {
+        type: rpcType, ref, is_partial: true, ...(lastEndLabel ? { last_end_label: lastEndLabel } : {}),
+      });
+      if (!part || typeof part !== 'object') break;
+      const next = part['#end_label'];
+      let added = 0;
+      for (const [key, val] of Object.entries(part)) {
+        if (key === '#end_label' || key in merged) continue;
+        merged[key] = val;
+        added++;
+      }
+      if (typeof next !== 'string' || next === lastEndLabel || added === 0) break;
+      lastEndLabel = next;
+    }
+    return merged;
+  };
+
   const fetchTab = useCallback(
     async (tab: TabKey) => {
       const key = `${network}:${dbPath}`;
@@ -71,13 +101,13 @@ export default function DatabasePage({
         // For root and shallow paths, always start with shallow fetch to avoid timeout
         const depth = dbPath.split('/').filter(Boolean).length;
         if (depth <= 2) {
-          result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+          result = await readShallow(rpcType, dbPath);
         } else {
           try {
             result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath });
           } catch {
             // Fallback to shallow for large deep nodes
-            result = await clientRpc(network, 'ain_get', { type: rpcType, ref: dbPath, is_shallow: true });
+            result = await readShallow(rpcType, dbPath);
           }
         }
         // Strip #state_ph placeholders from shallow results, keeping only key names
